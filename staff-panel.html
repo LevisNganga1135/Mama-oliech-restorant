@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html class="scroll-smooth" lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Staff Portal | Mama Oliech Restaurant</title>
+    <!-- Intentionally vague title — no "dashboard" or "admin" in title/meta -->
+    <meta name="robots" content="noindex, nofollow" />
+    <meta property="og:title" content="Staff Portal | Mama Oliech Restaurant" />
+    <meta property="og:description" content="Mama Oliech Restaurant Staff Portal." />
+    <meta property="og:image" content="https://mamaoliech.com/images/og-image.jpg" />
+    <meta property="og:url" content="https://mamaoliech.com/staff-panel.html" />
+    <meta property="og:type" content="restaurant" />
+    <meta name="twitter:card" content="summary_large_image" />
+
+    <!-- Fonts and Icons -->
+    <link href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+
+    <!-- Tailwind -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "brand-bg": "#FBF6EE",
+                        "brand-charcoal": "#2B2420",
+                        "brand-terracotta": "#D9692D",
+                        "brand-green": "#3A5A40",
+                        "brand-gold": "#E8B84B"
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Global Custom Stylesheet -->
+    <link href="css/style.css" rel="stylesheet" />
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+    <link rel="icon" type="image/png" href="favicon.png" />
+
+    <!--
+        PIN GATE — runs synchronously before the browser paints anything.
+        The dashboard <main> is hidden via inline style="display:none" in HTML.
+        This script either:
+          (a) finds a valid session in sessionStorage → removes the display:none
+          (b) finds no valid session → shows the login overlay
+        Because this is a <script> in <head> (not deferred), it executes before
+        first paint, so the dashboard content is never visible to unauthenticated users
+        even for a brief flash.
+
+        PIN is stored as a SHA-256 hash — never in plain text.
+        Default PIN: 2580  (staff should change this in the constant below)
+
+        HOW TO CHANGE THE PIN
+        ---------------------
+        1. Open your browser console on any page.
+        2. Run: crypto.subtle.digest('SHA-256', new TextEncoder().encode('YOURPIN'))
+               .then(b => console.log(Array.from(new Uint8Array(b)).map(x=>x.toString(16).padStart(2,'0')).join('')))
+        3. Copy the hex string and replace the value of PIN_HASH below.
+    -->
+    <script>
+        (function () {
+            'use strict';
+
+            // SHA-256 hash of the PIN "2580"
+            // To change: hash your new PIN as described above and replace this string.
+            var PIN_HASH = 'e7e35c10b7b0c60b6a60d89aabd3bcfea979e374a49562e0c2df8ab543e57e17';
+
+            var SESSION_KEY = 'mo_staff_auth';
+            var MAX_ATTEMPTS = 5;
+            var LOCKOUT_MS = 15 * 60 * 1000; // 15 minutes
+
+            // Check if already authenticated this browser session.
+            function isAuthenticated() {
+                try {
+                    return sessionStorage.getItem(SESSION_KEY) === PIN_HASH;
+                } catch (e) {
+                    return false;
+                }
+            }
+
+            // Expose gate controller so the DOMContentLoaded handler can call it.
+            window.__staffGate = {
+                pinHash: PIN_HASH,
+                sessionKey: SESSION_KEY,
+                maxAttempts: MAX_ATTEMPTS,
+                lockoutMs: LOCKOUT_MS,
+                authenticated: isAuthenticated()
+            };
+
+            // If not authenticated, we'll show the login overlay once DOM is ready.
+            // The dashboard main is hidden by default (style="display:none" in HTML).
+        }());
+    </script>
+</head>
+
+<body class="bg-brand-bg text-brand-charcoal font-body selection:bg-brand-terracotta selection:text-white">
+    <div class="grain"></div>
+
+    <!-- ══════════════════════════════════════════════════════════════════════
+         PIN LOGIN OVERLAY
+         Visible by default. Removed from DOM once correct PIN is entered.
+    ══════════════════════════════════════════════════════════════════════ -->
+    <div id="pin-gate-overlay" role="dialog" aria-modal="true" aria-labelledby="pin-gate-title"
+        style="position:fixed;inset:0;z-index:9998;background:var(--brand-bg);display:flex;align-items:center;justify-content:center;padding:1.5rem;">
+
+        <div style="background:#fff;border-radius:20px;padding:3rem 2.5rem;max-width:420px;width:100%;box-shadow:0 24px 64px rgba(43,36,32,0.14);border:1px solid var(--border-color);text-align:center;">
+
+            <!-- Logo -->
+            <div style="font-family:var(--font-headline);font-size:1.5rem;color:var(--brand-terracotta);font-weight:700;margin-bottom:0.5rem;">
+                Mama Oliech
+            </div>
+            <p style="font-size:0.8rem;text-transform:uppercase;letter-spacing:0.12em;color:var(--on-surface-variant);margin-bottom:2.5rem;">
+                Staff Portal
+            </p>
+
+            <!-- Lock icon -->
+            <div style="width:4rem;height:4rem;background:rgba(217,105,45,0.08);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 2rem;">
+                <span class="material-symbols-outlined" style="font-size:2rem;color:var(--brand-terracotta);">lock</span>
+            </div>
+
+            <h1 id="pin-gate-title" style="font-family:var(--font-headline);font-size:1.5rem;margin-bottom:0.5rem;">
+                Enter Staff PIN
+            </h1>
+            <p style="font-size:0.875rem;color:var(--on-surface-variant);margin-bottom:2rem;">
+                This area is restricted to Mama Oliech restaurant staff only.
+            </p>
+
+            <!-- PIN dot display -->
+            <div id="pin-dots" aria-hidden="true"
+                style="display:flex;justify-content:center;gap:0.75rem;margin-bottom:1.75rem;">
+                <span class="pin-dot" style="width:14px;height:14px;border-radius:50%;background:var(--border-color);transition:background 0.15s;"></span>
+                <span class="pin-dot" style="width:14px;height:14px;border-radius:50%;background:var(--border-color);transition:background 0.15s;"></span>
+                <span class="pin-dot" style="width:14px;height:14px;border-radius:50%;background:var(--border-color);transition:background 0.15s;"></span>
+                <span class="pin-dot" style="width:14px;height:14px;border-radius:50%;background:var(--border-color);transition:background 0.15s;"></span>
+            </div>
+
+            <!-- Hidden text input — used on mobile for keyboard, hidden visually -->
+            <input id="pin-input" type="password" inputmode="numeric" pattern="[0-9]*"
+                maxlength="4" autocomplete="one-time-code"
+                aria-label="Enter 4-digit staff PIN"
+                style="position:absolute;opacity:0;pointer-events:none;width:1px;height:1px;" />
+
+            <!-- Numeric keypad -->
+            <div id="pin-keypad"
+                style="display:grid;grid-template-columns:repeat(3,1fr);gap:0.75rem;max-width:240px;margin:0 auto 1.5rem;"
+                role="group" aria-label="PIN entry keypad">
+                <!-- Digits 1-9 -->
+                <button class="pin-key" data-digit="1">1</button>
+                <button class="pin-key" data-digit="2">2</button>
+                <button class="pin-key" data-digit="3">3</button>
+                <button class="pin-key" data-digit="4">4</button>
+                <button class="pin-key" data-digit="5">5</button>
+                <button class="pin-key" data-digit="6">6</button>
+                <button class="pin-key" data-digit="7">7</button>
+                <button class="pin-key" data-digit="8">8</button>
+                <button class="pin-key" data-digit="9">9</button>
+                <!-- Bottom row: blank, 0, backspace -->
+                <span></span>
+                <button class="pin-key" data-digit="0">0</button>
+                <button id="pin-backspace" aria-label="Delete last digit"
+                    style="background:rgba(43,36,32,0.06);">
+                    <span class="material-symbols-outlined" style="font-size:1.25rem;">backspace</span>
+                </button>
+            </div>
+
+            <!-- Status / error message -->
+            <div id="pin-status" role="alert" aria-live="assertive"
+                style="min-height:1.5rem;font-size:0.85rem;font-weight:600;color:#ba1a1a;margin-bottom:1rem;">
+            </div>
+
+            <!-- Back to site -->
+            <a href="index.html"
+                style="font-size:0.8rem;color:var(--on-surface-variant);text-decoration:none;display:inline-flex;align-items:center;gap:0.25rem;">
+                <span class="material-symbols-outlined" style="font-size:1rem;">arrow_back</span>
+                Back to restaurant website
+            </a>
+        </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════════════════════
+         DASHBOARD CONTENT (hidden until PIN is verified)
+    ══════════════════════════════════════════════════════════════════════ -->
+
+    <!-- Header -->
+    <header class="fixed w-full top-0 z-50 bg-brand-bg/90 backdrop-blur-md border-b border-brand-charcoal/10"
+        style="display:none;" id="dashboard-header">
+        <nav class="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
+            <a class="font-headline text-2xl font-bold text-brand-terracotta tracking-tight" href="index.html">
+                MAMA OLIECH RESTAURANT
+            </a>
+            <div class="flex gap-4 items-center">
+                <span style="font-size:0.8rem;color:var(--on-surface-variant);font-weight:600;">
+                    <span class="material-symbols-outlined" style="font-size:1rem;vertical-align:middle;">lock</span>
+                    Staff Portal
+                </span>
+                <button id="logout-btn"
+                    style="background:rgba(186,26,26,0.08);color:#ba1a1a;border:1px solid rgba(186,26,26,0.2);padding:0.5rem 1rem;border-radius:6px;font-weight:600;font-size:0.85rem;cursor:pointer;transition:all 0.2s;display:flex;align-items:center;gap:0.35rem;">
+                    <span class="material-symbols-outlined" style="font-size:1rem;">logout</span>
+                    Sign Out
+                </button>
+            </div>
+        </nav>
+    </header>
+
+    <!-- Dashboard Main -->
+    <main id="dashboard-main" style="display:none;">
+        <div class="pt-32 pb-24">
+            <div class="dashboard-container">
+
+                <!-- Dashboard Title Header -->
+                <div class="dashboard-header">
+                    <div>
+                        <h2 class="font-headline text-4xl mb-2">Reservation Dashboard</h2>
+                        <p style="color: var(--on-surface-variant); font-size: 0.95rem;">Track, verify, and complete table bookings submitted by guests.</p>
+                    </div>
+                    <button class="action-btn"
+                        onclick="if(confirm('Reset database to default seed bookings?')){localStorage.removeItem('mama_oliech_reservations'); window.location.reload();}"
+                        style="background-color: var(--brand-charcoal); color: white; border: none; padding: 0.75rem 1.25rem;">
+                        Reset Seed Data
+                    </button>
+                </div>
+
+                <!-- Stats Counters Row -->
+                <div class="dashboard-stats">
+                    <div class="stat-card">
+                        <div class="stat-icon bookings">
+                            <span class="material-symbols-outlined">table_restaurant</span>
+                        </div>
+                        <div class="stat-info">
+                            <h4>Total Bookings</h4>
+                            <p id="total-bookings">0</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon guests">
+                            <span class="material-symbols-outlined">groups</span>
+                        </div>
+                        <div class="stat-info">
+                            <h4>Expected Guests</h4>
+                            <p id="total-guests">0</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon pending">
+                            <span class="material-symbols-outlined">pending_actions</span>
+                        </div>
+                        <div class="stat-info">
+                            <h4>Pending Review</h4>
+                            <p id="pending-bookings">0</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Dashboard Filters & Controls -->
+                <div class="dashboard-controls">
+                    <div style="flex: 1; min-width: 250px;">
+                        <input id="search-booking" style="width: 100%;" type="text"
+                            placeholder="Search customer name, phone, or Booking ID..." />
+                    </div>
+                    <div>
+                        <select id="filter-status">
+                            <option value="all">All Statuses</option>
+                            <option value="pending">Pending</option>
+                            <option value="confirmed">Confirmed</option>
+                            <option value="completed">Completed</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Bookings List Table -->
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Booking ID</th>
+                                <th>Customer Details</th>
+                                <th>Guests</th>
+                                <th>Date &amp; Time</th>
+                                <th>Special Requests</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dashboard-body">
+                        </tbody>
+                    </table>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer (staff-only, minimal) -->
+    <footer id="dashboard-footer" style="display:none;background-color:var(--brand-charcoal);color:#fff;padding:2rem 1.5rem;text-align:center;">
+        <p style="font-size:0.8rem;opacity:0.5;">© 2026 Mama Oliech Restaurant — Staff Portal. Not for public distribution.</p>
+    </footer>
+
+    <!-- Keypad button styles (injected rather than relying on Tailwind) -->
+    <style>
+        .pin-key {
+            background: var(--surface-white, #fff);
+            border: 1px solid var(--border-color, rgba(43,36,32,0.1));
+            border-radius: 10px;
+            padding: 0.9rem;
+            font-family: var(--font-body, sans-serif);
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--brand-charcoal, #2B2420);
+            cursor: pointer;
+            transition: background 0.15s, transform 0.1s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .pin-key:hover {
+            background: var(--brand-bg, #FBF6EE);
+        }
+        .pin-key:active {
+            transform: scale(0.92);
+            background: rgba(217,105,45,0.08);
+        }
+        .pin-key:focus-visible {
+            outline: 3px solid var(--brand-terracotta, #D9692D);
+            outline-offset: 2px;
+        }
+        .pin-dot.filled {
+            background: var(--brand-terracotta, #D9692D) !important;
+        }
+        .pin-dot.error {
+            background: #ba1a1a !important;
+        }
+        #pin-gate-overlay.shake {
+            animation: pinShake 0.4s ease;
+        }
+        @keyframes pinShake {
+            0%, 100% { transform: translateX(0); }
+            20%       { transform: translateX(-10px); }
+            40%       { transform: translateX(10px); }
+            60%       { transform: translateX(-8px); }
+            80%       { transform: translateX(8px); }
+        }
+        #logout-btn:hover {
+            background: rgba(186,26,26,0.15) !important;
+        }
+    </style>
+
+    <!-- Scripts -->
+    <script src="js/main.js" defer></script>
+    <script src="js/booking.js" defer></script>
+
+    <!-- PIN Gate Logic -->
+    <script>
+    (function () {
+        'use strict';
+
+        var gate       = window.__staffGate;
+        var PIN_HASH   = gate.pinHash;
+        var SESSION_KEY = gate.sessionKey;
+        var MAX_ATTEMPTS = gate.maxAttempts;
+        var LOCKOUT_MS   = gate.lockoutMs;
+
+        var ATTEMPTS_KEY = 'mo_staff_attempts';
+        var LOCKOUT_KEY  = 'mo_staff_lockout';
+
+        var overlay    = document.getElementById('pin-gate-overlay');
+        var mainEl     = document.getElementById('dashboard-main');
+        var headerEl   = document.getElementById('dashboard-header');
+        var footerEl   = document.getElementById('dashboard-footer');
+        var dotsEl     = document.getElementById('pin-dots');
+        var statusEl   = document.getElementById('pin-status');
+        var pinInput   = document.getElementById('pin-input');
+        var logoutBtn  = document.getElementById('logout-btn');
+
+        var currentPin = '';
+
+        // ── Helper: SHA-256 via WebCrypto ──────────────────────────────────
+        function sha256hex(str) {
+            var encoded = new TextEncoder().encode(str);
+            return crypto.subtle.digest('SHA-256', encoded).then(function (buf) {
+                return Array.from(new Uint8Array(buf))
+                    .map(function (b) { return b.toString(16).padStart(2, '0'); })
+                    .join('');
+            });
+        }
+
+        // ── Show / hide dashboard ──────────────────────────────────────────
+        function showDashboard() {
+            overlay.style.display = 'none';
+            mainEl.style.display  = '';
+            headerEl.style.display = '';
+            footerEl.style.display = '';
+            // booking.js checks for #dashboard-body on DOMContentLoaded.
+            // If it already fired, trigger a manual render.
+            if (typeof renderDashboard === 'function') {
+                renderDashboard();
+            }
+        }
+
+        // ── Lockout helpers ────────────────────────────────────────────────
+        function getAttempts() {
+            return parseInt(localStorage.getItem(ATTEMPTS_KEY) || '0', 10);
+        }
+        function setAttempts(n) {
+            localStorage.setItem(ATTEMPTS_KEY, String(n));
+        }
+        function getLockoutUntil() {
+            return parseInt(localStorage.getItem(LOCKOUT_KEY) || '0', 10);
+        }
+        function setLockout() {
+            localStorage.setItem(LOCKOUT_KEY, String(Date.now() + LOCKOUT_MS));
+        }
+        function clearLockout() {
+            localStorage.removeItem(ATTEMPTS_KEY);
+            localStorage.removeItem(LOCKOUT_KEY);
+        }
+        function isLockedOut() {
+            var until = getLockoutUntil();
+            if (until && Date.now() < until) return true;
+            if (until && Date.now() >= until) clearLockout();
+            return false;
+        }
+        function minutesRemaining() {
+            var ms = getLockoutUntil() - Date.now();
+            return Math.ceil(ms / 60000);
+        }
+
+        // ── Update dot display ─────────────────────────────────────────────
+        function updateDots(error) {
+            var dots = dotsEl.querySelectorAll('.pin-dot');
+            dots.forEach(function (dot, i) {
+                dot.classList.remove('filled', 'error');
+                if (error) {
+                    dot.classList.add('error');
+                } else if (i < currentPin.length) {
+                    dot.classList.add('filled');
+                }
+            });
+        }
+
+        // ── Append a digit ─────────────────────────────────────────────────
+        function appendDigit(digit) {
+            if (isLockedOut()) return;
+            if (currentPin.length >= 4) return;
+            currentPin += digit;
+            updateDots(false);
+            statusEl.textContent = '';
+
+            if (currentPin.length === 4) {
+                verifyPin(currentPin);
+            }
+        }
+
+        // ── Remove last digit ──────────────────────────────────────────────
+        function removeDigit() {
+            if (currentPin.length === 0) return;
+            currentPin = currentPin.slice(0, -1);
+            updateDots(false);
+        }
+
+        // ── Verify the entered PIN ─────────────────────────────────────────
+        function verifyPin(pin) {
+            sha256hex(pin).then(function (hash) {
+                if (hash === PIN_HASH) {
+                    // Correct — store session and show dashboard.
+                    try { sessionStorage.setItem(SESSION_KEY, PIN_HASH); } catch (e) {}
+                    clearLockout();
+                    showDashboard();
+                } else {
+                    // Wrong — increment attempts.
+                    var attempts = getAttempts() + 1;
+                    setAttempts(attempts);
+
+                    currentPin = '';
+                    updateDots(true);
+
+                    // Shake animation.
+                    overlay.classList.remove('shake');
+                    void overlay.offsetWidth; // reflow to restart animation
+                    overlay.classList.add('shake');
+
+                    var remaining = MAX_ATTEMPTS - attempts;
+
+                    if (attempts >= MAX_ATTEMPTS) {
+                        setLockout();
+                        statusEl.textContent = 'Too many incorrect attempts. Locked for 15 minutes.';
+                    } else {
+                        statusEl.textContent = 'Incorrect PIN. ' + remaining + ' attempt' + (remaining === 1 ? '' : 's') + ' remaining.';
+                    }
+
+                    // Reset dots to empty after shake.
+                    setTimeout(function () {
+                        updateDots(false);
+                    }, 600);
+                }
+            });
+        }
+
+        // ── Lockout screen ─────────────────────────────────────────────────
+        function checkAndShowLockout() {
+            if (isLockedOut()) {
+                statusEl.textContent = 'Account locked. Try again in ' + minutesRemaining() + ' minute(s).';
+                document.getElementById('pin-keypad').style.pointerEvents = 'none';
+                document.getElementById('pin-keypad').style.opacity = '0.4';
+                // Refresh every 10s to update the countdown and re-enable when expired.
+                var timer = setInterval(function () {
+                    if (!isLockedOut()) {
+                        clearInterval(timer);
+                        statusEl.textContent = '';
+                        document.getElementById('pin-keypad').style.pointerEvents = '';
+                        document.getElementById('pin-keypad').style.opacity = '';
+                    } else {
+                        statusEl.textContent = 'Account locked. Try again in ' + minutesRemaining() + ' minute(s).';
+                    }
+                }, 10000);
+            }
+        }
+
+        // ── Keypad button listeners ────────────────────────────────────────
+        document.getElementById('pin-keypad').addEventListener('click', function (e) {
+            var btn = e.target.closest('.pin-key[data-digit]');
+            if (btn) appendDigit(btn.dataset.digit);
+        });
+
+        document.getElementById('pin-backspace').addEventListener('click', removeDigit);
+
+        // ── Physical keyboard support ──────────────────────────────────────
+        document.addEventListener('keydown', function (e) {
+            if (overlay.style.display === 'none') return; // dashboard visible, don't intercept
+            if (/^[0-9]$/.test(e.key)) { appendDigit(e.key); return; }
+            if (e.key === 'Backspace') removeDigit();
+        });
+
+        // ── Logout button ──────────────────────────────────────────────────
+        if (logoutBtn) {
+            logoutBtn.addEventListener('click', function () {
+                try { sessionStorage.removeItem(SESSION_KEY); } catch (e) {}
+                // Show overlay, hide dashboard.
+                overlay.style.display = 'flex';
+                mainEl.style.display  = 'none';
+                headerEl.style.display = 'none';
+                footerEl.style.display = 'none';
+                currentPin = '';
+                updateDots(false);
+                statusEl.textContent = '';
+            });
+        }
+
+        // ── On load: check existing session or show gate ───────────────────
+        document.addEventListener('DOMContentLoaded', function () {
+            if (gate.authenticated) {
+                showDashboard();
+            } else {
+                checkAndShowLockout();
+                // Focus the hidden input so mobile keyboards might appear.
+                // (Most mobile browsers won't show keyboard without direct user tap,
+                //  but this improves desktop keyboard entry.)
+                if (pinInput) pinInput.focus();
+            }
+        });
+
+    }());
+    </script>
+</body>
+</html>
