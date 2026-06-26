@@ -1,0 +1,5 @@
+.env
+node_modules/
+ngrok
+ngrok.zip
+ngrok.tgz
