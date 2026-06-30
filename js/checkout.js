@@ -327,6 +327,17 @@ function startPolling(checkoutId, total) {
             if (data.status === 'success') {
                 stopPolling();
                 showModalSuccess(data.mpesaCode, data.amount, data.phone);
+
+                // Save order to logged-in user's history
+                if (window.Auth && window.Auth.isLoggedIn()) {
+                    window.Auth.saveOrderToUser({
+                        orderId:   checkoutId,
+                        items:     getCart(),
+                        total:     getCartTotal(getCart()),
+                        mpesaCode: data.mpesaCode,
+                    });
+                }
+
                 clearCart(); // wipe cart after successful payment
                 return;
             }
@@ -441,5 +452,55 @@ function escHtml(str) {
         .replace(/'/g, '&#039;');
 }
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   7. AUTH INTEGRATION
+   — Autofill name & phone from logged-in user
+   — Save completed order to user's history
+   — Show login prompt if not logged in
+═══════════════════════════════════════════════════════════════════════════ */
+
+function initAuthIntegration() {
+    // Autofill if user is already logged in
+    if (window.Auth && window.Auth.isLoggedIn()) {
+        window.Auth.autofillCheckout();
+    }
+
+    // Show a subtle "login to save your order" banner if not logged in
+    if (window.Auth && !window.Auth.isLoggedIn()) {
+        const banner = document.createElement('div');
+        banner.style.cssText = [
+            'background: #fff8f0',
+            'border: 1.5px solid var(--brand-terracotta, #D9692D)',
+            'border-radius: 10px',
+            'padding: 0.75rem 1rem',
+            'font-size: 0.85rem',
+            'margin-bottom: 1rem',
+            'display: flex',
+            'align-items: center',
+            'justify-content: space-between',
+            'gap: 0.5rem',
+            'flex-wrap: wrap',
+        ].join(';');
+        banner.innerHTML = `
+            <span>👤 <strong>Login</strong> to save your order history and auto-fill your details.</span>
+            <button id="checkout-login-btn" style="
+                background: var(--brand-terracotta, #D9692D);
+                color: #fff; border: none; border-radius: 8px;
+                padding: 0.4rem 0.9rem; font-size: 0.82rem;
+                font-weight: 700; cursor: pointer;
+            ">Login / Register</button>
+        `;
+
+        // Insert banner above the payment form
+        const payPanel = document.querySelector('.checkout-panel:last-of-type');
+        if (payPanel) payPanel.insertBefore(banner, payPanel.querySelector('h2').nextSibling);
+
+        banner.querySelector('#checkout-login-btn').addEventListener('click', () => {
+            window.Auth.openAuthModal('login');
+        });
+    }
+}
+
 /* ─── INIT ──────────────────────────────────────────────────────────────── */
 renderCart();
+initAuthIntegration();
