@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html class="scroll-smooth" lang="en">
 <head>
-    
     <meta charset="utf-8" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <title>Our Signature Menu | Mama Oliech Restaurant</title>
@@ -38,6 +37,7 @@
     
     <!-- Global Custom Stylesheet -->
     <link href="css/style.css" rel="stylesheet" />
+    <link href="css/cart.css" rel="stylesheet" />
     <!-- Favicon -->
     <link rel="icon" type="image/svg+xml" href="favicon.svg" />
     <link rel="icon" type="image/png" href="favicon.png" />
@@ -59,12 +59,26 @@
                 <a class="font-semibold text-sm hover:text-brand-terracotta transition-colors" href="events.html">Events</a>
                 <a class="font-semibold text-sm hover:text-brand-terracotta transition-colors" href="gallery.html">Gallery</a>
                 <a class="font-semibold text-sm hover:text-brand-terracotta transition-colors" href="contact.html">Location</a>
+                
+                <!-- Desktop Cart Icon -->
+                <button id="cart-toggle-btn" class="relative p-2 text-brand-charcoal hover:text-brand-terracotta transition-colors flex items-center gap-1" aria-label="Open shopping cart">
+                    <span class="material-symbols-outlined">shopping_cart</span>
+                    <span id="cart-count-badge" class="absolute -top-1 -right-1 bg-brand-terracotta text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center border-2 border-brand-bg opacity-0 transition-opacity">0</span>
+                </button>
+
                 <a class="bg-brand-terracotta text-white px-6 py-2 rounded-lg font-semibold text-sm hover:scale-95 transition-all" href="index.html#reservation">Reserve Now</a>
             </div>
-            <!-- Mobile Menu Toggle -->
-            <button class="mobile-nav-toggle md:hidden p-2 text-brand-charcoal">
-                <span class="material-symbols-outlined">menu</span>
-            </button>
+            
+            <!-- Mobile Header Controls -->
+            <div class="flex items-center gap-2 md:hidden">
+                <button id="cart-toggle-btn-mobile" class="relative p-2 text-brand-charcoal hover:text-brand-terracotta transition-colors flex items-center" aria-label="Open shopping cart">
+                    <span class="material-symbols-outlined">shopping_cart</span>
+                    <span id="cart-count-badge-mobile" class="absolute -top-1 -right-1 bg-brand-terracotta text-white text-[9px] font-bold w-4.5 h-4.5 rounded-full flex items-center justify-center border border-brand-bg opacity-0 transition-opacity">0</span>
+                </button>
+                <button class="mobile-nav-toggle p-2 text-brand-charcoal">
+                    <span class="material-symbols-outlined">menu</span>
+                </button>
+            </div>
         </nav>
     </header>
 
@@ -155,11 +169,8 @@
     </a>
 
     <!-- Scripts -->
-     <!-- Add auth.js to every page: index.html, menu.html, checkout.html -->
-    <script src="js/auth.js" defer></script>
     <script src="js/main.js" defer></script>
     <script src="js/menu.js" defer></script>
     <script src="js/cart.js" defer></script>
-    
 </body>
 </html>

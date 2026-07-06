@@ -1,19 +1,46 @@
 {
-  "name": "mama-oliech-backend",
+  "name": "mama-oliech-restaurant-api",
   "version": "1.0.0",
-  "description": "M-Pesa STK Push backend for Mama Oliech Restaurant",
+  "description": "API Gateway and Payment Integration Backend for Mama Oliech Restaurant",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "nodemon server.js"
+    "dev": "nodemon server.js",
+    "db:init": "node db/init-db.js",
+    "db:seed": "node db/seed-menu.js",
+    "db:migrate": "knex migrate:latest",
+    "db:rollback": "knex migrate:rollback",
+    "db:migrate:make": "knex migrate:make",
+    "test": "jest --detectOpenHandles --runInBand"
   },
+  "keywords": [
+    "express",
+    "postgresql",
+    "mpesa",
+    "daraja",
+    "restaurant",
+    "checkout"
+  ],
+  "author": "Antigravity",
+  "license": "ISC",
   "dependencies": {
     "axios": "^1.7.2",
+    "bcrypt": "^5.1.1",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
-    "express": "^4.19.2"
+    "express": "^4.19.2",
+    "express-rate-limit": "^7.3.1",
+    "helmet": "^7.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "knex": "^3.1.1",
+    "mysql2": "^3.11.0",
+    "pg": "^8.22.0",
+    "qrcode": "^1.5.3",
+    "speakeasy": "^2.0.0"
   },
   "devDependencies": {
-    "nodemon": "^3.1.4"
+    "jest": "^29.7.0",
+    "nodemon": "^3.1.4",
+    "supertest": "^7.0.0"
   }
 }

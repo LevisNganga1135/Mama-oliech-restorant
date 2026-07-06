@@ -1,0 +1,677 @@
+/* =============================================================================
+   MAMA OLIECH RESTAURANT — Cart & Checkout Stylesheet
+   cart.css — Styling for side drawer, checkout modal, and notifications
+   ============================================================================= */
+
+/* ── Cart Drawer Backdrop ────────────────────────────────────────────────── */
+.cart-drawer-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(43, 36, 32, 0.4);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    z-index: 1000;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+                visibility 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.cart-drawer-overlay.active {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* ── Cart Drawer Panel ───────────────────────────────────────────────────── */
+.cart-drawer {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 100%;
+    max-width: 450px;
+    height: 100%;
+    background-color: var(--brand-bg);
+    box-shadow: -8px 0 32px rgba(43, 36, 32, 0.15);
+    z-index: 1001;
+    display: flex;
+    flex-direction: column;
+    transform: translateX(100%);
+    transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    border-left: 1px solid var(--border-color);
+}
+
+.cart-drawer-overlay.active .cart-drawer {
+    transform: translateX(0);
+}
+
+/* Header */
+.cart-drawer-header {
+    padding: 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: var(--surface-white);
+}
+
+.cart-drawer-title {
+    font-family: var(--font-headline);
+    font-size: 1.5rem;
+    color: var(--brand-charcoal);
+    font-weight: 700;
+}
+
+.cart-drawer-close {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--brand-charcoal);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.5rem;
+    border-radius: 50%;
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.cart-drawer-close:hover {
+    background-color: var(--surface-container);
+    color: var(--brand-terracotta);
+}
+
+/* Scrollable Content */
+.cart-drawer-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+/* Empty State */
+.cart-empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 80%;
+    text-align: center;
+    gap: 1rem;
+    opacity: 0.7;
+}
+
+.cart-empty-icon {
+    font-size: 3.5rem;
+    color: var(--brand-terracotta);
+}
+
+/* Footer / Summary */
+.cart-drawer-footer {
+    padding: 1.5rem;
+    background-color: var(--surface-white);
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.cart-summary-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.95rem;
+}
+
+.cart-summary-total {
+    font-family: var(--font-headline);
+    font-size: 1.35rem;
+    font-weight: 700;
+}
+
+.cart-summary-total-price {
+    font-family: var(--font-body);
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: var(--brand-terracotta);
+}
+
+/* Cart Item Card */
+.cart-item {
+    display: flex;
+    gap: 1rem;
+    padding: 1rem;
+    background-color: var(--surface-white);
+    border-radius: 12px;
+    border: 1px solid var(--border-color-light);
+    box-shadow: var(--shadow-sm);
+    transition: transform 0.2s ease;
+}
+
+.cart-item:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.cart-item-img {
+    width: 75px;
+    height: 75px;
+    border-radius: 8px;
+    object-fit: cover;
+    background-color: var(--surface-container);
+}
+
+.cart-item-details {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.cart-item-title {
+    font-family: var(--font-headline);
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--brand-charcoal);
+    line-height: 1.2;
+}
+
+.cart-item-price {
+    font-size: 0.9rem;
+    color: var(--brand-terracotta);
+    font-weight: 600;
+    margin-top: 0.25rem;
+}
+
+.cart-item-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 0.5rem;
+}
+
+.cart-quantity-selector {
+    display: flex;
+    align-items: center;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    overflow: hidden;
+    background-color: var(--brand-bg);
+}
+
+.cart-qty-btn {
+    border: none;
+    background: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    color: var(--brand-charcoal);
+    font-size: 0.8rem;
+    transition: background-color 0.2s ease;
+}
+
+.cart-qty-btn:hover {
+    background-color: var(--surface-container);
+    color: var(--brand-terracotta);
+}
+
+.cart-qty-val {
+    width: 32px;
+    text-align: center;
+    font-size: 0.85rem;
+    font-weight: 600;
+    user-select: none;
+}
+
+.cart-item-remove {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--on-surface-variant);
+    opacity: 0.6;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.25rem;
+    border-radius: 4px;
+    transition: opacity 0.2s ease, color 0.2s ease, background-color 0.2s ease;
+}
+
+.cart-item-remove:hover {
+    opacity: 1;
+    color: #ba1a1a;
+    background-color: rgba(186, 26, 26, 0.05);
+}
+
+/* ── Checkout Modal Backdrop ─────────────────────────────────────────────── */
+.checkout-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(43, 36, 32, 0.5);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    z-index: 1010;
+    opacity: 0;
+    visibility: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 1.5rem;
+    transition: opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+                visibility 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.checkout-modal-overlay.active {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* ── Checkout Modal Card ────────────────────────────────────────────────── */
+.checkout-modal {
+    width: 100%;
+    max-width: 550px;
+    max-height: 90vh;
+    background-color: var(--brand-bg);
+    border-radius: 20px;
+    box-shadow: var(--shadow-lg);
+    border: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transform: scale(0.95);
+    transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.checkout-modal-overlay.active .checkout-modal {
+    transform: scale(1);
+}
+
+.checkout-modal-header {
+    padding: 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: var(--surface-white);
+}
+
+.checkout-modal-title {
+    font-family: var(--font-headline);
+    font-size: 1.5rem;
+    color: var(--brand-charcoal);
+    font-weight: 700;
+}
+
+.checkout-modal-close {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--brand-charcoal);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.5rem;
+    border-radius: 50%;
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.checkout-modal-close:hover {
+    background-color: var(--surface-container);
+    color: var(--brand-terracotta);
+}
+
+.checkout-modal-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1.5rem;
+}
+
+.checkout-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+/* Form Styling */
+.checkout-form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.checkout-form-label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--brand-charcoal);
+}
+
+.checkout-form-input, 
+.checkout-form-textarea, 
+.checkout-form-select {
+    font-family: var(--font-body);
+    font-size: 0.95rem;
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    background-color: var(--surface-white);
+    color: var(--brand-charcoal);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    width: 100%;
+}
+
+.checkout-form-input:focus, 
+.checkout-form-textarea:focus, 
+.checkout-form-select:focus {
+    outline: none;
+    border-color: var(--brand-terracotta);
+    box-shadow: 0 0 0 3px rgba(217, 105, 45, 0.15);
+}
+
+.checkout-form-textarea {
+    resize: vertical;
+    min-height: 80px;
+}
+
+.checkout-form-error {
+    font-size: 0.8rem;
+    color: #ba1a1a;
+    display: none;
+}
+
+.checkout-form-group.has-error .checkout-form-input {
+    border-color: #ba1a1a;
+}
+
+.checkout-form-group.has-error .checkout-form-error {
+    display: block;
+}
+
+.checkout-modal-footer {
+    padding: 1.5rem;
+    background-color: var(--surface-white);
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    gap: 1rem;
+}
+
+/* ── Dynamic Payment Section ── */
+.payment-details-box {
+    background-color: var(--brand-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 1.25rem;
+    margin-top: 0.75rem;
+    transition: all 0.3s ease;
+}
+
+.payment-tab-group {
+    display: flex;
+    gap: 0.5rem;
+    background-color: rgba(43, 36, 32, 0.05);
+    padding: 0.25rem;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+}
+
+.payment-tab {
+    flex: 1;
+    border: none;
+    background: none;
+    padding: 0.6rem;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--brand-charcoal);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+}
+
+.payment-tab:hover {
+    background-color: rgba(217, 105, 45, 0.08);
+}
+
+.payment-tab.active {
+    background-color: var(--surface-white);
+    color: var(--brand-terracotta);
+    box-shadow: 0 2px 8px rgba(43, 36, 32, 0.08);
+}
+
+.payment-method-panel {
+    display: none;
+}
+
+.payment-method-panel.active {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+/* Alert Info Box */
+.payment-info-alert {
+    display: flex;
+    gap: 0.75rem;
+    align-items: flex-start;
+    padding: 0.875rem;
+    background-color: rgba(232, 184, 75, 0.15);
+    border: 1px solid rgba(232, 184, 75, 0.3);
+    border-radius: 8px;
+    color: var(--brand-charcoal);
+    font-size: 0.85rem;
+    line-height: 1.4;
+}
+
+.payment-info-icon {
+    color: var(--brand-terracotta);
+    font-size: 1.25rem;
+}
+
+/* Simulation Processing Overlay */
+.checkout-simulation-overlay {
+    position: absolute;
+    inset: 0;
+    background-color: var(--brand-bg);
+    z-index: 1020;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2.5rem;
+    text-align: center;
+    animation: fadeIn 0.3s ease forwards;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.sim-loader {
+    width: 64px;
+    height: 64px;
+    border: 4px solid var(--border-color);
+    border-top: 4px solid var(--brand-terracotta);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 2rem;
+}
+
+.sim-phone-pulse {
+    font-size: 4rem;
+    color: var(--brand-green);
+    animation: phonePulse 1.5s infinite ease-in-out; /* Activates the pulse */
+    margin-bottom: 2.0rem;
+}
+
+@keyframes phonePulse {
+    0%, 100% {
+        transform: scale(1);
+        opacity: 0.6;
+        filter: drop-shadow(0 0 2px rgba(58, 90, 64, 0.1));
+    }
+    50% {
+        transform: scale(1.18);
+        opacity: 1;
+        filter: drop-shadow(0 0 15px rgba(58, 90, 64, 0.45));
+    }
+}
+
+.sim-progress-track {
+    width: 100%;
+    max-width: 250px;
+    height: 6px;
+    background-color: rgba(43, 36, 32, 0.1);
+    border-radius: 3px;
+    margin: 1.5rem auto;
+    overflow: hidden;
+}
+
+.sim-progress-bar {
+    height: 100%;
+    width: 0%;
+    background-color: var(--brand-terracotta);
+    border-radius: 3px;
+    transition: width 0.3s linear;
+}
+
+.sim-secure-modal {
+    background-color: var(--surface-white);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    padding: 2rem;
+    box-shadow: var(--shadow-md);
+    max-width: 320px;
+    width: 100%;
+    margin-top: 1rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+}
+
+.sim-secure-title {
+    font-family: var(--font-headline);
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: var(--brand-charcoal);
+}
+
+/* ── Toast Notifications ─────────────────────────────────────────────────── */
+.toast-container {
+    position: fixed;
+    bottom: 2rem;
+    left: 2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    z-index: 9999;
+    pointer-events: none;
+}
+
+.toast {
+    background-color: var(--brand-charcoal);
+    color: var(--brand-bg);
+    padding: 1rem 1.5rem;
+    border-radius: 12px;
+    box-shadow: var(--shadow-lg);
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    pointer-events: auto;
+    transform: translateY(20px);
+    opacity: 0;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    min-width: 280px;
+    max-width: 380px;
+}
+
+.toast.show {
+    transform: translateY(0);
+    opacity: 1;
+}
+
+.toast-icon {
+    color: var(--brand-gold);
+    font-size: 1.35rem;
+}
+
+.toast-message {
+    font-size: 0.9rem;
+    font-weight: 500;
+    line-height: 1.4;
+}
+
+.toast-close {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--brand-bg);
+    opacity: 0.6;
+    margin-left: auto;
+    padding: 0.25rem;
+    display: flex;
+    transition: opacity 0.2s ease;
+}
+
+.toast-close:hover {
+    opacity: 1;
+}
+
+/* ── Success Modal Animation ─────────────────────────────────────────────── */
+.success-checkmark {
+    width: 80px;
+    height: 80px;
+    margin: 1.5rem auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: rgba(58, 90, 64, 0.1);
+    color: var(--brand-green);
+    border-radius: 50%;
+}
+
+.success-checkmark span {
+    font-size: 3rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 480px) {
+    .cart-drawer {
+        max-width: 100%;
+    }
+    .checkout-modal {
+        max-height: 95vh;
+        border-radius: 16px;
+    }
+    .toast-container {
+        left: 1rem;
+        right: 1rem;
+        bottom: 1rem;
+    }
+    .toast {
+        min-width: 0;
+    }
+}
+
+/* Animation to spin the loading ring */
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
+}

@@ -1,404 +1,262 @@
 <!DOCTYPE html>
-<html lang="en">
+<html class="scroll-smooth" lang="en">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Checkout — Mama Oliech Restaurant</title>
-
-    <link rel="stylesheet" href="css/style.css" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet" />
-
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Secure Checkout | Mama Oliech Restaurant</title>
+    <meta name="robots" content="noindex, nofollow" />
+    
+    <!-- Fonts and Icons -->
+    <link href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    
+    <!-- Tailwind -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "brand-bg": "#FBF6EE",
+                        "brand-charcoal": "#2B2420",
+                        "brand-terracotta": "#D9692D",
+                        "brand-green": "#3A5A40",
+                        "brand-gold": "#E8B84B"
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- Global Custom Stylesheet -->
+    <link href="css/style.css" rel="stylesheet" />
+    <link href="css/cart.css" rel="stylesheet" />
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+    <link rel="icon" type="image/png" href="favicon.png" />
+    
     <style>
-        body {
-            background: var(--surface, #FBF6EE);
-            min-height: 100vh;
+        .checkout-tab {
+            transition: all 0.3s ease;
         }
-
-        .checkout-wrapper {
-            max-width: 900px;
-            margin: 2rem auto;
-            padding: 0 1.25rem 4rem;
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 2rem;
-            align-items: start;
+        .checkout-tab.active {
+            background-color: var(--brand-terracotta);
+            color: #ffffff;
+            border-color: var(--brand-terracotta);
+            box-shadow: 0 4px 12px rgba(217, 105, 45, 0.2);
         }
-
-        @media (max-width: 680px) {
-            .checkout-wrapper { grid-template-columns: 1fr; }
-        }
-
-        /* ── Panels ── */
-        .checkout-panel {
-            background: #fff;
-            border-radius: 16px;
-            padding: 1.75rem;
-            box-shadow: 0 2px 16px rgba(0,0,0,0.07);
-        }
-
-        .checkout-panel h2 {
-            font-family: 'Playfair Display', serif;
-            font-size: 1.4rem;
-            margin-bottom: 1.25rem;
-            color: var(--on-surface, #1C1B1F);
-            border-bottom: 2px solid var(--brand-terracotta, #D9692D);
-            padding-bottom: 0.6rem;
-        }
-
-        /* ── Cart rows ── */
-        .cart-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 0.75rem 0;
-            border-bottom: 1px solid rgba(0,0,0,0.07);
-            gap: 0.75rem;
-        }
-        .cart-item:last-of-type { border-bottom: none; }
-
-        .cart-item-name {
-            font-weight: 600;
-            font-size: 0.95rem;
-            flex: 1;
-        }
-
-        .cart-item-qty {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .qty-btn {
-            width: 28px;
-            height: 28px;
-            border-radius: 50%;
-            border: 1.5px solid var(--brand-terracotta, #D9692D);
-            background: transparent;
-            color: var(--brand-terracotta, #D9692D);
-            font-size: 1.1rem;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 700;
-            transition: all 0.15s ease;
-        }
-        .qty-btn:hover { background: var(--brand-terracotta, #D9692D); color: #fff; }
-
-        .qty-value { font-weight: 700; min-width: 1.5rem; text-align: center; }
-
-        .cart-item-price {
-            font-weight: 700;
-            color: var(--brand-terracotta, #D9692D);
-            font-size: 0.95rem;
-            min-width: 5rem;
-            text-align: right;
-        }
-
-        .remove-btn {
-            background: none;
-            border: none;
-            cursor: pointer;
-            color: #aaa;
-            font-size: 1.1rem;
-            padding: 0 0.25rem;
-            transition: color 0.15s;
-        }
-        .remove-btn:hover { color: #ba1a1a; }
-
-        /* ── Totals ── */
-        .cart-totals {
-            margin-top: 1.25rem;
-            border-top: 2px solid var(--brand-terracotta, #D9692D);
-            padding-top: 1rem;
-        }
-        .cart-totals .row {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 0.4rem;
-            font-size: 0.95rem;
-        }
-        .cart-totals .row.total { font-size: 1.1rem; font-weight: 700; margin-top: 0.5rem; }
-
-        /* ── Empty cart ── */
-        .cart-empty { text-align: center; padding: 2.5rem 0; opacity: 0.6; }
-        .cart-empty p { margin-bottom: 1rem; }
-
-        /* ── M-Pesa form ── */
-        .mpesa-logo { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 1.25rem; }
-
-        .mpesa-logo-icon {
-            width: 48px;
-            height: 48px;
-            background: #00A651;
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #fff;
-            font-weight: 900;
-            font-size: 0.7rem;
-            letter-spacing: -0.03em;
-            flex-shrink: 0;
-        }
-
-        .form-group { margin-bottom: 1.1rem; }
-
-        .form-group label {
-            display: block;
-            font-size: 0.85rem;
-            font-weight: 600;
-            margin-bottom: 0.4rem;
-            color: var(--on-surface, #1C1B1F);
-        }
-
-        .form-group input {
-            width: 100%;
-            padding: 0.75rem 1rem;
-            border: 1.5px solid rgba(0,0,0,0.15);
-            border-radius: 10px;
-            font-size: 1rem;
-            font-family: inherit;
-            background: var(--surface, #FBF6EE);
-            transition: border-color 0.2s;
-            box-sizing: border-box;
-        }
-        .form-group input:focus { outline: none; border-color: var(--brand-terracotta, #D9692D); }
-
-        .field-error { color: #ba1a1a; font-size: 0.8rem; margin-top: 0.3rem; display: block; }
-
-        /* ── Pay button ── */
-        .pay-btn {
-            width: 100%;
-            padding: 1rem;
-            background: #00A651;
-            color: #fff;
-            border: none;
-            border-radius: 12px;
-            font-size: 1.05rem;
-            font-weight: 700;
-            cursor: pointer;
-            margin-top: 0.5rem;
-            transition: background 0.2s ease, transform 0.1s ease;
-            letter-spacing: 0.02em;
-        }
-        .pay-btn:hover:not(:disabled) { background: #007a3d; transform: translateY(-1px); }
-        .pay-btn:disabled { opacity: 0.6; cursor: not-allowed; }
-
-        /* ── Modal ── */
-        .payment-modal {
+        .field-panel {
             display: none;
-            position: fixed;
-            inset: 0;
-            background: rgba(0,0,0,0.55);
-            z-index: 1000;
-            align-items: center;
-            justify-content: center;
-            padding: 1.5rem;
         }
-        .payment-modal.active { display: flex; }
-
-        .payment-modal-box {
-            background: #fff;
-            border-radius: 20px;
-            padding: 2.5rem 2rem;
-            max-width: 420px;
-            width: 100%;
-            text-align: center;
-            box-shadow: 0 8px 40px rgba(0,0,0,0.18);
+        .field-panel.active {
+            display: block;
+            animation: slideUp 0.3s ease forwards;
         }
-
-        .modal-icon { font-size: 4rem; margin-bottom: 1rem; display: block; }
-        .modal-title { font-family: 'Playfair Display', serif; font-size: 1.5rem; margin-bottom: 0.75rem; }
-        .modal-desc { color: #555; font-size: 0.95rem; line-height: 1.6; margin-bottom: 1.5rem; }
-
-        .modal-spinner {
-            width: 48px;
-            height: 48px;
-            border: 4px solid #e0e0e0;
-            border-top-color: #00A651;
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-            margin: 0 auto 1.25rem;
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
         }
-        @keyframes spin { to { transform: rotate(360deg); } }
-
-        .modal-code {
-            background: #f0f9f0;
-            border: 1.5px solid #00A651;
-            border-radius: 10px;
-            padding: 0.75rem 1rem;
-            font-weight: 700;
-            font-size: 1.1rem;
-            color: #007a3d;
-            letter-spacing: 0.08em;
-            margin: 0.75rem 0 1.25rem;
-            display: inline-block;
+        .checkout-summary-card {
+            background-color: var(--surface-white);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            box-shadow: var(--shadow-md);
         }
-
-        .modal-btn {
-            padding: 0.8rem 2rem;
-            border-radius: 10px;
-            border: none;
-            font-size: 0.95rem;
-            font-weight: 700;
-            cursor: pointer;
-            background: var(--brand-terracotta, #D9692D);
-            color: #fff;
-            transition: background 0.2s;
-        }
-        .modal-btn:hover { background: #b8521f; }
-        .modal-btn.secondary {
-            background: transparent;
-            color: var(--brand-terracotta, #D9692D);
-            border: 1.5px solid var(--brand-terracotta, #D9692D);
-            margin-left: 0.5rem;
-        }
-
-        /* ── Back link / titles ── */
-        .back-link {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.35rem;
-            color: var(--brand-terracotta, #D9692D);
-            font-weight: 600;
-            font-size: 0.9rem;
-            text-decoration: none;
-            margin-bottom: 1.5rem;
-        }
-        .back-link:hover { text-decoration: underline; }
-
-        .checkout-page-title { font-family: 'Playfair Display', serif; font-size: 2rem; margin-bottom: 0.25rem; }
-        .checkout-subtitle { color: #666; font-size: 0.9rem; margin-bottom: 2rem; }
     </style>
 </head>
-<body>
-
-<!-- Header -->
-<header style="background:#fff;padding:1rem 2rem;box-shadow:0 1px 8px rgba(0,0,0,0.08);display:flex;align-items:center;justify-content:space-between;">
-    <a href="index.html" style="font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:700;color:var(--brand-terracotta,#D9692D);text-decoration:none;">
-        🐟 Mama Oliech
-    </a>
-    <span style="font-size:0.85rem;color:#666;">Secure Checkout</span>
-</header>
-
-<main style="padding: 0 1rem;">
-
-    <div style="max-width:900px;margin:1.75rem auto 0;">
-        <a href="menu.html" class="back-link">← Back to Menu</a>
-        <h1 class="checkout-page-title">Your Order</h1>
-        <p class="checkout-subtitle">Review your items and pay securely with M-Pesa.</p>
-    </div>
-
-    <div class="checkout-wrapper">
-
-        <!-- LEFT: Cart summary -->
-        <section class="checkout-panel" aria-label="Order summary">
-            <h2>Order Summary</h2>
-            <div id="cart-items-container">
-                <div class="cart-empty">
-                    <p>🛒 Your cart is empty.</p>
-                    <a href="menu.html" class="modal-btn" style="display:inline-block;text-decoration:none;padding:0.7rem 1.5rem;">
-                        Browse Menu
-                    </a>
-                </div>
+<body class="bg-brand-bg text-brand-charcoal font-body selection:bg-brand-terracotta selection:text-white relative min-h-screen">
+    <div class="grain"></div>
+    
+    <!-- Header -->
+    <header class="fixed w-full top-0 z-50 bg-brand-bg/90 backdrop-blur-md border-b border-brand-charcoal/10">
+        <nav class="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
+            <a class="font-headline text-2xl font-bold text-brand-terracotta tracking-tight" href="index.html">
+                MAMA OLIECH RESTAURANT
+            </a>
+            <div class="flex gap-4 items-center">
+                <a href="menu.html" class="font-semibold text-sm hover:text-brand-terracotta transition-colors flex items-center gap-1">
+                    <span class="material-symbols-outlined text-[18px]">arrow_back</span> Back to Menu
+                </a>
             </div>
-            <div class="cart-totals" id="cart-totals" style="display:none;">
-                <div class="row">
-                    <span>Subtotal</span>
-                    <span id="subtotal-display">KES 0</span>
-                </div>
-                <div class="row total">
-                    <span>Total</span>
-                    <span id="total-display">KES 0</span>
-                </div>
-            </div>
-        </section>
+        </nav>
+    </header>
 
-        <!-- RIGHT: M-Pesa payment form -->
-        <section class="checkout-panel" aria-label="Payment">
-            <h2>Pay with M-Pesa</h2>
-
-            <div class="mpesa-logo">
-                <div class="mpesa-logo-icon">M-PESA</div>
-                <div>
-                    <div style="font-weight:700;font-size:0.95rem;">Lipa Na M-Pesa</div>
-                    <div style="font-size:0.8rem;color:#555;">STK Push — PIN prompt on your phone</div>
-                </div>
-            </div>
-
-            <div class="form-group">
-                <label for="mpesa-name">Full Name</label>
-                <input type="text" id="mpesa-name" placeholder="e.g. John Kamau" autocomplete="name" />
-                <span class="field-error" id="err-name"></span>
-            </div>
-
-            <div class="form-group">
-                <label for="mpesa-phone">M-Pesa Phone Number</label>
-                <input type="tel" id="mpesa-phone" placeholder="e.g. 0712 345 678" autocomplete="tel" inputmode="numeric" />
-                <span class="field-error" id="err-phone"></span>
-            </div>
-
-            <p style="font-size:0.82rem;color:#666;line-height:1.6;margin-bottom:1.25rem;">
-                You will receive an M-Pesa PIN prompt on <strong id="phone-preview">your phone</strong>.
-                Enter your PIN to complete payment. Do not share your PIN with anyone.
-            </p>
-
-            <button class="pay-btn" id="pay-btn" disabled aria-disabled="true">
-                Pay via M-Pesa
-            </button>
-
-            <p style="font-size:0.75rem;color:#999;text-align:center;margin-top:0.75rem;">
-                🔒 Powered by Safaricom Daraja API
-            </p>
-        </section>
-
-    </div>
-</main>
-
-<!-- Payment status modal -->
-<div class="payment-modal" id="payment-modal" role="dialog" aria-modal="true" aria-label="Payment status">
-    <div class="payment-modal-box">
-
-        <!-- Waiting for PIN -->
-        <div id="modal-pending">
-            <div class="modal-spinner"></div>
-            <div class="modal-title">Waiting for PIN…</div>
-            <div class="modal-desc">
-                An M-Pesa payment request has been sent to <strong id="modal-phone"></strong>.<br><br>
-                Please check your phone and enter your M-Pesa PIN to complete payment.
-            </div>
-            <button class="modal-btn secondary" id="modal-cancel-btn">Cancel</button>
+    <!-- Main Container -->
+    <main class="max-w-6xl mx-auto px-6 pt-32 pb-24 relative z-10" id="checkout-main-content">
+        <div class="mb-8">
+            <h1 class="font-headline text-4xl font-bold tracking-tight mb-2">Secure Checkout</h1>
+            <p class="text-sm opacity-85">Review your Lakeside fish order and choose your preferred delivery method.</p>
         </div>
 
-        <!-- Payment succeeded -->
-        <div id="modal-success" style="display:none;">
-            <span class="modal-icon">✅</span>
-            <div class="modal-title" style="color:#007a3d;">Payment Successful!</div>
-            <div class="modal-desc">Your order has been paid. M-Pesa confirmation code:</div>
-            <div class="modal-code" id="mpesa-receipt-code">—</div>
-            <div class="modal-desc" id="modal-success-detail"></div>
-            <button class="modal-btn" id="modal-done-btn">Back to Menu</button>
-        </div>
+        <div class="grid lg:grid-cols-12 gap-8 items-start">
+            
+            <!-- Left: Checkout Forms (lg:col-span-7) -->
+            <section class="lg:col-span-7 bg-white p-6 md:p-8 rounded-2xl border border-brand-charcoal/5 shadow-xl">
+                
+                <!-- Order Type Segmented Tabs -->
+                <div class="mb-6">
+                    <label class="block text-xs font-semibold uppercase tracking-wider mb-3 text-brand-charcoal/70">Order Type</label>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-2 bg-brand-bg p-1 rounded-xl border border-brand-charcoal/5">
+                        <button type="button" id="tab-delivery" class="checkout-tab active py-2.5 rounded-lg text-xs font-semibold border border-transparent text-center" data-type="delivery">
+                            🛵 Delivery
+                        </button>
+                        <button type="button" id="tab-takeaway" class="checkout-tab py-2.5 rounded-lg text-xs font-semibold border border-transparent text-center" data-type="takeaway">
+                            🥡 Takeaway
+                        </button>
+                        <button type="button" id="tab-room" class="checkout-tab py-2.5 rounded-lg text-xs font-semibold border border-transparent text-center" data-type="room_service">
+                            🏨 Room Svc
+                        </button>
+                        <button type="button" id="tab-dinein" class="checkout-tab py-2.5 rounded-lg text-xs font-semibold border border-transparent text-center" data-type="dine_in">
+                            🍽 Dine-In
+                        </button>
+                    </div>
+                </div>
 
-        <!-- Payment failed -->
-        <div id="modal-failed" style="display:none;">
-            <span class="modal-icon">❌</span>
-            <div class="modal-title" style="color:#ba1a1a;">Payment Failed</div>
-            <div class="modal-desc" id="modal-fail-reason">
-                The payment was not completed. You may have cancelled or entered the wrong PIN.
-            </div>
-            <button class="modal-btn" id="modal-retry-btn">Try Again</button>
-        </div>
+                <form id="restaurant-checkout-form" class="checkout-form" novalidate>
+                    
+                    <!-- Contact Details (Common to all) -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="checkout-form-group">
+                            <label class="checkout-form-label" for="checkout-name">Your Full Name</label>
+                            <input type="text" id="checkout-name" class="checkout-form-input" placeholder="Idris Elba" required />
+                            <span class="checkout-form-error" id="error-name">Please enter your full name.</span>
+                        </div>
+                        <div class="checkout-form-group">
+                            <label class="checkout-form-label" for="checkout-phone">Phone Number</label>
+                            <input type="tel" id="checkout-phone" class="checkout-form-input" placeholder="e.g. 0712345678" required />
+                            <span class="checkout-form-error" id="error-phone">Valid phone number required.</span>
+                        </div>
+                    </div>
 
+                    <!-- Contextual Form Panels -->
+                    <div class="mt-4">
+                        
+                        <!-- 1. Delivery Panel -->
+                        <div id="panel-delivery" class="field-panel active flex flex-col gap-4">
+                            <div class="checkout-form-group">
+                                <label class="checkout-form-label" for="checkout-delivery-area">Delivery Area (Nairobi)</label>
+                                <select id="checkout-delivery-area" class="checkout-form-select">
+                                    <option value="kilimani">Kilimani (Free)</option>
+                                    <option value="kileleshwa">Kileleshwa (KES 150)</option>
+                                    <option value="lavington">Lavington (KES 150)</option>
+                                    <option value="westlands">Westlands (KES 200)</option>
+                                    <option value="cbd">Nairobi CBD (KES 200)</option>
+                                </select>
+                            </div>
+                            <div class="checkout-form-group">
+                                <label class="checkout-form-label" for="checkout-address">Delivery Address / House Details</label>
+                                <textarea id="checkout-address" class="checkout-form-textarea" placeholder="e.g. Lenana Heights, Apartment 4B, Lenana Road" required></textarea>
+                                <span class="checkout-form-error" id="error-address">Please enter your delivery address.</span>
+                            </div>
+                        </div>
+
+                        <!-- 2. Takeaway Panel -->
+                        <div id="panel-takeaway" class="field-panel flex flex-col gap-4">
+                            <div class="checkout-form-group">
+                                <label class="checkout-form-label" for="checkout-pickup-time">Preferred Pickup Time</label>
+                                <input type="time" id="checkout-pickup-time" class="checkout-form-input" required />
+                                <span class="checkout-form-error" id="error-pickup-time">Please choose a preferred pickup time.</span>
+                            </div>
+                        </div>
+
+                        <!-- 3. Room Service Panel -->
+                        <div id="panel-room" class="field-panel flex flex-col gap-4">
+                            <div class="grid grid-cols-2 gap-4">
+                                <div class="checkout-form-group">
+                                    <label class="checkout-form-label" for="checkout-room">Room Number</label>
+                                    <input type="text" id="checkout-room" class="checkout-form-input" placeholder="e.g. 302" required />
+                                    <span class="checkout-form-error" id="error-room">Room number is required.</span>
+                                </div>
+                                <div class="checkout-form-group">
+                                    <label class="checkout-form-label" for="checkout-room-lastname">Guest Last Name</label>
+                                    <input type="text" id="checkout-room-lastname" class="checkout-form-input" placeholder="e.g. Elba" required />
+                                    <span class="checkout-form-error" id="error-room-lastname">Last name is required.</span>
+                                </div>
+                            </div>
+                            <div class="checkout-form-group">
+                                <label class="checkout-form-label" for="checkout-room-pin">Room Access PIN</label>
+                                <input type="password" id="checkout-room-pin" class="checkout-form-input" placeholder="e.g. 1234" maxlength="4" required />
+                                <span class="checkout-form-error" id="error-room-pin">4-digit Room PIN is required.</span>
+                            </div>
+                        </div>
+
+                        <!-- 4. Dine-In Panel -->
+                        <div id="panel-dinein" class="field-panel flex flex-col gap-4">
+                            <div class="checkout-form-group">
+                                <label class="checkout-form-label" for="checkout-table">Table Number</label>
+                                <input type="number" id="checkout-table" class="checkout-form-input" placeholder="e.g. 12" min="1" max="100" required />
+                                <span class="checkout-form-error" id="error-table">Please enter your table number.</span>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- Payment Options -->
+                    <div class="checkout-form-group mt-4">
+                        <label class="checkout-form-label" for="checkout-payment">Payment Method</label>
+                        <select id="checkout-payment" class="checkout-form-select">
+                            <option value="card_online">Pay Online / Card (Stripe/M-Pesa)</option>
+                            <option value="cash_delivery">Cash/Card on Delivery</option>
+                            <option value="room_charge" id="option-room-charge">Charge to Room (Room Service Only)</option>
+                        </select>
+                    </div>
+
+                    <!-- Dynamic Payment Sub-Fields (M-Pesa / Card tabs) -->
+                    <div id="payment-details-box" class="payment-details-box mt-4">
+                        <!-- Loaded dynamically via checkout.js -->
+                    </div>
+
+                    <!-- Special Instructions -->
+                    <div class="checkout-form-group mt-4">
+                        <label class="checkout-form-label" for="checkout-instructions">Allergies / Special Instructions</label>
+                        <textarea id="checkout-instructions" class="checkout-form-textarea" placeholder="e.g. No onions, separate the wet sauce..."></textarea>
+                    </div>
+                </form>
+            </section>
+            
+            <!-- Right: Order Summary (lg:col-span-5) -->
+            <section class="lg:col-span-5 checkout-summary-card p-6 flex flex-col gap-6">
+                <h3 class="font-headline font-bold text-xl border-b border-brand-charcoal/10 pb-3 text-brand-charcoal/90">Order Summary</h3>
+                
+                <!-- Items list -->
+                <div class="flex flex-col gap-4 max-h-[300px] overflow-y-auto pr-2" id="checkout-summary-items">
+                    <!-- Loaded dynamically via checkout.js -->
+                </div>
+                
+                <!-- Pricing Totals -->
+                <div class="border-t border-brand-charcoal/10 pt-4 flex flex-col gap-3">
+                    <div class="flex justify-between items-center text-sm font-medium">
+                        <span class="opacity-75">Items Total</span>
+                        <span id="summary-subtotal">KES 0</span>
+                    </div>
+                    <div class="flex justify-between items-center text-sm font-medium">
+                        <span class="opacity-75">Service / Delivery Fee</span>
+                        <span id="summary-fee">KES 0</span>
+                    </div>
+                    <div class="flex justify-between items-center text-lg font-bold border-t border-brand-charcoal/5 pt-3">
+                        <span>Total Bill</span>
+                        <span class="text-brand-terracotta" id="summary-total">KES 0</span>
+                    </div>
+                </div>
+
+                <!-- Action Button -->
+                <button type="submit" form="restaurant-checkout-form" id="checkout-submit-btn" class="bg-brand-terracotta text-white w-full py-4 rounded-xl font-headline text-lg hover:scale-[0.98] active:scale-95 transition-all flex justify-center items-center gap-2 hover:bg-opacity-95 shadow-lg">
+                    Confirm &amp; Pay KES 0
+                </button>
+            </section>
+            
+        </div>
+    </main>
+
+    <!-- Global success state view container (hidden on start) -->
+    <div id="checkout-success-view" class="max-w-2xl mx-auto px-6 pt-32 pb-24 relative z-10 hidden">
+        <!-- Content injected dynamically on success -->
     </div>
-</div>
 
-<!-- Add auth.js to every page: index.html, menu.html, checkout.html -->
-<script src="js/auth.js" defer></script>
-<script src="js/checkout.js"></script>
+    <!-- Scripts -->
+    <script src="js/main.js" defer></script>
+    <script src="js/checkout.js" defer></script>
 </body>
 </html>

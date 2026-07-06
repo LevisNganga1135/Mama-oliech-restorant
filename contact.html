@@ -233,9 +233,20 @@
             const latitude = -1.2912;
             const longitude = 36.7925;
 
-            const map = L.map('map', {
+            // We determine if we are on a touch device
+            const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+
+            const mapOptions = {
                 scrollWheelZoom: false // disable scrolling zoom on scroll
-            }).setView([latitude, longitude], 15);
+            };
+
+            // If it's a touch device, disable dragging by default so they scroll the page, not the map
+            if (isTouchDevice) {
+                mapOptions.dragging = false;
+                mapOptions.tap = false;
+            }
+
+            const map = L.map('map', mapOptions).setView([latitude, longitude], 15);
 
             L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
                 attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
@@ -246,6 +257,51 @@
             // Custom Leaflet Marker
             const marker = L.marker([latitude, longitude]).addTo(map);
             marker.bindPopup("<div style='font-family: var(--font-headline); font-weight: bold;'>Mama Oliech Restaurant</div><div style='font-size: 0.8rem; font-family: var(--font-body);'>Marcus Garvey Rd, Nairobi</div>").openPopup();
+
+            // Set up two-finger touch overlay gestures for mobile
+            if (isTouchDevice) {
+                const mapEl = document.getElementById('map');
+                const overlay = document.createElement('div');
+                overlay.className = 'map-touch-overlay';
+                overlay.innerHTML = '<div class="map-touch-message">Use two fingers to pan the map</div>';
+                mapEl.appendChild(overlay);
+
+                let showOverlayTimeout = null;
+
+                mapEl.addEventListener('touchstart', (e) => {
+                    if (e.touches.length === 2) {
+                        // Two fingers: enable dragging and hide overlay
+                        map.dragging.enable();
+                        overlay.classList.remove('active');
+                        if (showOverlayTimeout) clearTimeout(showOverlayTimeout);
+                    } else if (e.touches.length === 1) {
+                        // One finger: make sure dragging is disabled
+                        map.dragging.disable();
+                        
+                        // Show overlay after a brief delay so simple taps don't trigger it
+                        if (showOverlayTimeout) clearTimeout(showOverlayTimeout);
+                        showOverlayTimeout = setTimeout(() => {
+                            overlay.classList.add('active');
+                        }, 100);
+                    }
+                });
+
+                mapEl.addEventListener('touchend', (e) => {
+                    // Reset when all touches end
+                    if (e.touches.length === 0) {
+                        map.dragging.disable();
+                        overlay.classList.remove('active');
+                        if (showOverlayTimeout) clearTimeout(showOverlayTimeout);
+                    }
+                });
+
+                mapEl.addEventListener('touchmove', (e) => {
+                    if (e.touches.length === 2) {
+                        overlay.classList.remove('active');
+                        if (showOverlayTimeout) clearTimeout(showOverlayTimeout);
+                    }
+                });
+            }
         });
     </script>
 </body>

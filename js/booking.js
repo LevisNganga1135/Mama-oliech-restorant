@@ -16,6 +16,12 @@
 
 'use strict';
 
+const BACKEND_URL = window.MAMA_OLIECH_API_URL || (
+    window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.protocol === 'file:'
+        ? 'http://localhost:5000'
+        : ''
+);
+
 /* ═════════════════════════════════════════════════════════════════════════════
    1. CONSTANTS
 ═════════════════════════════════════════════════════════════════════════════ */
@@ -359,11 +365,8 @@ function handleFormSubmit(e) {
         return;
     }
 
-    // ── Build and persist the reservation object ─────────────────────────────
+    // ── Build the reservation object ─────────────────────────────────────────
     const reservation = {
-        id:        'BK-' + Date.now(),
-        timestamp: new Date().toISOString(),
-        status:    'pending',
         name:      data.name.trim(),
         phone:     data.phone.trim(),
         size:      String(parseInt(data.size, 10)),
@@ -372,31 +375,83 @@ function handleFormSubmit(e) {
         requests:  (data.requests || '').trim() || 'None',
     };
 
-    saveReservationToStorage(reservation);
+    // ── Pre-open blank tab synchronously to bypass browser popup blocker ─────
+    const waWindow = window.open('', '_blank');
 
-    // ── Open WhatsApp deeplink BEFORE the alert ───────────────────────────────
-    // Browsers block window.open() if it's called after an alert() because the
-    // alert suspends the call stack and the browser treats the open as
-    // non-user-initiated. Opening first keeps it within the click event.
-    const waUrl = buildWhatsAppUrl(reservation);
-    window.open(waUrl, '_blank', 'noopener,noreferrer');
-
-    // ── Reset form and show success state ────────────────────────────────────
-    form.reset();
-
-    // Replace the submit button text briefly as visual feedback.
+    // ── Visual Loading Feedback ──────────────────────────────────────────────
     const submitBtn = form.querySelector('button[type="submit"]');
+    let originalText = 'Confirm Reservation';
     if (submitBtn) {
-        const original = submitBtn.textContent;
-        submitBtn.textContent = '✓ Reservation sent!';
+        originalText = submitBtn.textContent;
+        submitBtn.textContent = 'Processing...';
         submitBtn.disabled = true;
-        submitBtn.style.backgroundColor = 'var(--brand-green)';
-        setTimeout(() => {
-            submitBtn.textContent = original;
-            submitBtn.disabled = false;
-            submitBtn.style.backgroundColor = '';
-        }, 4000);
     }
+
+    // ── Save to backend database first ───────────────────────────────────────
+    fetch(`${BACKEND_URL}/api/reservations`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(reservation)
+    })
+    .then(async res => {
+        if (!res.ok) {
+            const errData = await res.json().catch(() => ({}));
+            throw new Error(errData.error || 'Server error occurred.');
+        }
+        return res.json();
+    })
+    .then(data => {
+        // Retrieve generated booking ID from backend
+        const savedRes = {
+            id: data.reservation ? data.reservation.id : 'BK-Pending',
+            name: reservation.name,
+            phone: reservation.phone,
+            size: reservation.size,
+            date: reservation.date,
+            time: reservation.time,
+            requests: reservation.requests
+        };
+
+        // Redirect the pre-opened tab to the finalized WhatsApp url
+        const waUrl = buildWhatsAppUrl(savedRes);
+        if (waWindow) {
+            waWindow.location.href = waUrl;
+        }
+
+        // Reset form and show success state
+        form.reset();
+        if (submitBtn) {
+            submitBtn.textContent = '✓ Reservation recorded!';
+            submitBtn.style.backgroundColor = 'var(--brand-green)';
+            submitBtn.disabled = true;
+            setTimeout(() => {
+                submitBtn.textContent = originalText;
+                submitBtn.disabled = false;
+                submitBtn.style.backgroundColor = '';
+            }, 4000);
+        }
+    })
+    .catch(err => {
+        console.error('💥 Failed to save reservation to backend database:', err);
+
+        // Close the pre-opened tab since the booking failed
+        if (waWindow) {
+            waWindow.close();
+        }
+
+        // Show a clear error message to the customer
+        alert(`⚠️ Booking Failure: ${err.message}`);
+
+        if (submitBtn) {
+            submitBtn.textContent = 'Retry Reservation';
+            submitBtn.disabled = false;
+            submitBtn.style.backgroundColor = '#ba1a1a';
+            setTimeout(() => {
+                submitBtn.textContent = originalText;
+                submitBtn.style.backgroundColor = '';
+            }, 4000);
+        }
+    });
 }
 
 /* ═════════════════════════════════════════════════════════════════════════════
@@ -426,34 +481,50 @@ function getDashboardRefs() {
  * Reads from storage, applies current filter/search, updates stat cards,
  * and rebuilds the table body.
  */
-function renderDashboard() {
+function renderDashboard(isSilent = false) {
     const refs = getDashboardRefs();
     if (!refs.tbody) return; // Not on dashboard page.
 
-    // Always read fresh from storage so changes from other tabs are reflected.
-    const all = getReservationsFromStorage();
+    if (!isSilent) {
+        refs.tbody.innerHTML = `<tr><td colspan="7" class="text-center py-8 opacity-75">Loading reservations from server...</td></tr>`;
+    }
 
-    // Sort newest timestamp first.
-    all.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+    fetch(`${BACKEND_URL}/api/reservations`, {
+        headers: {
+            'Authorization': `Bearer ${sessionStorage.getItem('mo_staff_auth') || ''}`
+        }
+    })
+        .then(res => {
+            if (!res.ok) throw new Error('Fetch failed');
+            return res.json();
+        })
+        .then(all => {
+            // Sort newest timestamp first.
+            all.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
-    // Apply filters.
-    const query  = refs.searchInput  ? refs.searchInput.value.trim().toLowerCase()  : '';
-    const status = refs.statusFilter ? refs.statusFilter.value : 'all';
+            // Apply filters.
+            const query  = refs.searchInput  ? refs.searchInput.value.trim().toLowerCase()  : '';
+            const status = refs.statusFilter ? refs.statusFilter.value : 'all';
 
-    const filtered = all.filter(res => {
-        const matchesStatus = status === 'all' || res.status === status;
-        const matchesQuery  = !query ||
-            res.name.toLowerCase().includes(query)  ||
-            res.phone.replace(/\s/g, '').includes(query.replace(/\s/g, '')) ||
-            res.id.toLowerCase().includes(query);
-        return matchesStatus && matchesQuery;
-    });
+            const filtered = all.filter(res => {
+                const matchesStatus = status === 'all' || res.status === status;
+                const matchesQuery  = !query ||
+                    res.name.toLowerCase().includes(query)  ||
+                    res.phone.replace(/\s/g, '').includes(query.replace(/\s/g, '')) ||
+                    res.id.toLowerCase().includes(query);
+                return matchesStatus && matchesQuery;
+            });
 
-    // Stats always reflect the FULL unfiltered list (total restaurant picture).
-    updateStatCards(all);
+            // Stats always reflect the FULL unfiltered list.
+            updateStatCards(all);
 
-    // Render table rows.
-    renderTableBody(refs.tbody, filtered);
+            // Render table rows.
+            renderTableBody(refs.tbody, filtered);
+        })
+        .catch(err => {
+            console.error('💥 Failed to fetch reservations:', err);
+            refs.tbody.innerHTML = `<tr><td colspan="7" class="no-bookings py-8 text-red-600">Failed to load reservations from server.</td></tr>`;
+        });
 }
 
 /**
@@ -565,19 +636,34 @@ function renderTableBody(tbody, list) {
  * Attach search + filter listeners once.
  * Called once from DOMContentLoaded when on the dashboard page.
  */
+let _bookingPollingTimer = null;
+
+function startBookingPolling() {
+    if (_bookingPollingTimer) clearInterval(_bookingPollingTimer);
+    _bookingPollingTimer = setInterval(() => {
+        const reservationsSection = document.getElementById('reservations-section');
+        if (reservationsSection && reservationsSection.style.display !== 'none') {
+            renderDashboard(true);
+        }
+    }, 10000);
+}
+
 function initDashboardControls() {
     const refs = getDashboardRefs();
     if (!refs.tbody) return;
 
     if (refs.searchInput) {
-        refs.searchInput.addEventListener('input', renderDashboard);
+        refs.searchInput.addEventListener('input', () => renderDashboard(false));
     }
     if (refs.statusFilter) {
-        refs.statusFilter.addEventListener('change', renderDashboard);
+        refs.statusFilter.addEventListener('change', () => renderDashboard(false));
     }
 
     // Initial render.
     renderDashboard();
+
+    // Start background auto-refresh polling
+    startBookingPolling();
 }
 
 /* ═════════════════════════════════════════════════════════════════════════════
@@ -599,17 +685,22 @@ function updateBookingStatus(id, newStatus) {
         return;
     }
 
-    const reservations = getReservationsFromStorage();
-    const index = reservations.findIndex(r => r.id === id);
-
-    if (index === -1) {
-        console.warn('[booking.js] Booking not found:', id);
-        return;
-    }
-
-    reservations[index].status = newStatus;
-    saveAllReservationsToStorage(reservations);
-    renderDashboard();
+    fetch(`${BACKEND_URL}/api/reservations/${id}`, {
+        method: 'PUT',
+        headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${sessionStorage.getItem('mo_staff_auth') || ''}`
+        },
+        body: JSON.stringify({ status: newStatus })
+    })
+    .then(res => {
+        if (!res.ok) throw new Error('Update failed');
+        renderDashboard();
+    })
+    .catch(err => {
+        console.error('💥 Error updating reservation:', err);
+        alert('Failed to update reservation status on server.');
+    });
 }
 window.updateBookingStatus = updateBookingStatus;
 
@@ -618,22 +709,25 @@ window.updateBookingStatus = updateBookingStatus;
  * @param {string} id
  */
 function deleteBooking(id) {
-    const reservations = getReservationsFromStorage();
-    const booking = reservations.find(r => r.id === id);
-
-    if (!booking) {
-        console.warn('[booking.js] Booking not found for delete:', id);
-        return;
-    }
-
     const confirmed = window.confirm(
-        `Delete reservation for "${booking.name}" on ${booking.date} at ${booking.time}?\n\nThis cannot be undone.`
+        `Delete reservation ${id}?\n\nThis cannot be undone.`
     );
     if (!confirmed) return;
 
-    const updated = reservations.filter(r => r.id !== id);
-    saveAllReservationsToStorage(updated);
-    renderDashboard();
+    fetch(`${BACKEND_URL}/api/reservations/${id}`, {
+        method: 'DELETE',
+        headers: {
+            'Authorization': `Bearer ${sessionStorage.getItem('mo_staff_auth') || ''}`
+        }
+    })
+    .then(res => {
+        if (!res.ok) throw new Error('Delete failed');
+        renderDashboard();
+    })
+    .catch(err => {
+        console.error('💥 Error deleting booking:', err);
+        alert('Could not delete reservation. Please try again.');
+    });
 }
 window.deleteBooking = deleteBooking;
 
