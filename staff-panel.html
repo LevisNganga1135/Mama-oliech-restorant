@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html class="scroll-smooth" lang="en">
+
 <head>
     <meta charset="utf-8" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
@@ -43,58 +44,47 @@
     <link rel="icon" type="image/png" href="favicon.png" />
 
     <!--
-        PIN GATE — runs synchronously before the browser paints anything.
+        STAFF GATE — runs synchronously before the browser paints anything.
         The dashboard <main> is hidden via inline style="display:none" in HTML.
         This script either:
-          (a) finds a valid session in sessionStorage → removes the display:none
+          (a) finds a valid, unexpired JWT session in sessionStorage → removes the display:none
           (b) finds no valid session → shows the login overlay
         Because this is a <script> in <head> (not deferred), it executes before
         first paint, so the dashboard content is never visible to unauthenticated users
         even for a brief flash.
 
-        PIN is stored as a SHA-256 hash — never in plain text.
-        Default PIN: 2580  (staff should change this in the constant below)
-
-        HOW TO CHANGE THE PIN
-        ---------------------
-        1. Open your browser console on any page.
-        2. Run: crypto.subtle.digest('SHA-256', new TextEncoder().encode('YOURPIN'))
-               .then(b => console.log(Array.from(new Uint8Array(b)).map(x=>x.toString(16).padStart(2,'0')).join('')))
-        3. Copy the hex string and replace the value of PIN_HASH below.
+        Session state is managed via JWT. The sign-in process challenges staff for their
+        username/password credentials followed by a 6-digit rolling TOTP MFA verification code.
     -->
     <script>
-        (function () {
-            'use strict';
+            (function () {
+                'use strict';
 
-            // SHA-256 hash of the PIN "2580"
-            // To change: hash your new PIN as described above and replace this string.
-            var PIN_HASH = 'e7e35c10b7b0c60b6a60d89aabd3bcfea979e374a49562e0c2df8ab543e57e17';
+                var SESSION_KEY = 'mo_staff_auth';
 
-            var SESSION_KEY = 'mo_staff_auth';
-            var MAX_ATTEMPTS = 5;
-            var LOCKOUT_MS = 15 * 60 * 1000; // 15 minutes
-
-            // Check if already authenticated this browser session.
-            function isAuthenticated() {
-                try {
-                    return sessionStorage.getItem(SESSION_KEY) === PIN_HASH;
-                } catch (e) {
-                    return false;
+                // Check if already authenticated this browser session.
+                function isAuthenticated() {
+                    try {
+                        const token = sessionStorage.getItem(SESSION_KEY);
+                        if (!token) return false;
+                        
+                        // Parse token payload to see if it is a valid, unexpired JWT
+                        const base64Url = token.split('.')[1];
+                        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+                        const payload = JSON.parse(window.atob(base64));
+                        const isExpired = payload.exp && (Date.now() >= payload.exp * 1000);
+                        return !isExpired;
+                    } catch (e) {
+                        return false;
+                    }
                 }
-            }
 
-            // Expose gate controller so the DOMContentLoaded handler can call it.
-            window.__staffGate = {
-                pinHash: PIN_HASH,
-                sessionKey: SESSION_KEY,
-                maxAttempts: MAX_ATTEMPTS,
-                lockoutMs: LOCKOUT_MS,
-                authenticated: isAuthenticated()
-            };
-
-            // If not authenticated, we'll show the login overlay once DOM is ready.
-            // The dashboard main is hidden by default (style="display:none" in HTML).
-        }());
+                // Expose gate controller so the DOMContentLoaded handler can call it.
+                window.__staffGate = {
+                    sessionKey: SESSION_KEY,
+                    authenticated: isAuthenticated()
+                };
+            }());
     </script>
 </head>
 
@@ -105,7 +95,7 @@
          PIN LOGIN OVERLAY
          Visible by default. Removed from DOM once correct PIN is entered.
     ══════════════════════════════════════════════════════════════════════ -->
-    <div id="pin-gate-overlay" role="dialog" aria-modal="true" aria-labelledby="pin-gate-title"
+    <div id="pin-gate-overlay" role="dialog" aria-modal="true" aria-labelledby="login-title"
         style="position:fixed;inset:0;z-index:9998;background:var(--brand-bg);display:flex;align-items:center;justify-content:center;padding:1.5rem;">
 
         <div style="background:#fff;border-radius:20px;padding:3rem 2.5rem;max-width:420px;width:100%;box-shadow:0 24px 64px rgba(43,36,32,0.14);border:1px solid var(--border-color);text-align:center;">
@@ -118,64 +108,86 @@
                 Staff Portal
             </p>
 
-            <!-- Lock icon -->
-            <div style="width:4rem;height:4rem;background:rgba(217,105,45,0.08);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 2rem;">
-                <span class="material-symbols-outlined" style="font-size:2rem;color:var(--brand-terracotta);">lock</span>
+            <!-- 1. Password Login Form -->
+            <div id="login-view-form">
+                <div style="width:4rem;height:4rem;background:rgba(217,105,45,0.08);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 2rem;">
+                    <span class="material-symbols-outlined" style="font-size:2rem;color:var(--brand-terracotta);">lock</span>
+                </div>
+                <h1 id="login-title" style="font-family:var(--font-headline);font-size:1.5rem;margin-bottom:0.5rem;">
+                    Staff Sign In
+                </h1>
+                <p style="font-size:0.875rem;color:var(--on-surface-variant);margin-bottom:1.5rem;">
+                    Restricted to Mama Oliech restaurant staff.
+                </p>
+                <form id="form-staff-login" class="flex flex-col gap-3 text-left">
+                    <div>
+                        <label for="input-username" class="block text-xs font-semibold mb-1 opacity-70">Username</label>
+                        <input id="input-username" type="text" required placeholder="Enter username" class="w-full px-4 py-3 rounded-lg border border-brand-charcoal/10 text-sm focus:outline-none focus:border-brand-terracotta" />
+                    </div>
+                    <div>
+                        <label for="input-password" class="block text-xs font-semibold mb-1 opacity-70">Password</label>
+                        <input id="input-password" type="password" required placeholder="Enter password" class="w-full px-4 py-3 rounded-lg border border-brand-charcoal/10 text-sm focus:outline-none focus:border-brand-terracotta" />
+                    </div>
+                    <button type="submit" class="bg-brand-terracotta text-white w-full py-3.5 rounded-lg font-semibold text-sm hover:bg-opacity-95 transition-all mt-2">
+                        Sign In
+                    </button>
+                </form>
             </div>
 
-            <h1 id="pin-gate-title" style="font-family:var(--font-headline);font-size:1.5rem;margin-bottom:0.5rem;">
-                Enter Staff PIN
-            </h1>
-            <p style="font-size:0.875rem;color:var(--on-surface-variant);margin-bottom:2rem;">
-                This area is restricted to Mama Oliech restaurant staff only.
-            </p>
-
-            <!-- PIN dot display -->
-            <div id="pin-dots" aria-hidden="true"
-                style="display:flex;justify-content:center;gap:0.75rem;margin-bottom:1.75rem;">
-                <span class="pin-dot" style="width:14px;height:14px;border-radius:50%;background:var(--border-color);transition:background 0.15s;"></span>
-                <span class="pin-dot" style="width:14px;height:14px;border-radius:50%;background:var(--border-color);transition:background 0.15s;"></span>
-                <span class="pin-dot" style="width:14px;height:14px;border-radius:50%;background:var(--border-color);transition:background 0.15s;"></span>
-                <span class="pin-dot" style="width:14px;height:14px;border-radius:50%;background:var(--border-color);transition:background 0.15s;"></span>
+            <!-- 2. MFA Setup View -->
+            <div id="mfa-setup-view" class="hidden">
+                <div style="width:4rem;height:4rem;background:rgba(232,184,75,0.08);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 1.5rem;">
+                    <span class="material-symbols-outlined" style="font-size:2rem;color:var(--brand-gold);">qr_code_2</span>
+                </div>
+                <h1 style="font-family:var(--font-headline);font-size:1.5rem;margin-bottom:0.5rem;">
+                    Set Up MFA
+                </h1>
+                <p style="font-size:0.8rem;color:var(--on-surface-variant);margin-bottom:1rem;">
+                    Scan the QR code with Google Authenticator or Duo, then enter the 6-digit verification code.
+                </p>
+                <img id="mfa-qrcode-img" class="mx-auto my-3 w-40 h-40 border rounded-lg shadow-sm" alt="MFA QR Code" />
+                <div class="text-[10px] opacity-75 font-mono bg-brand-bg p-2 rounded mb-4 select-all" id="mfa-secret-text"></div>
+                <form id="form-mfa-setup" class="flex flex-col gap-3 text-left">
+                    <div>
+                        <label for="input-mfa-setup" class="block text-xs font-semibold mb-1 opacity-70">Verification Code</label>
+                        <input id="input-mfa-setup" type="text" required placeholder="000000" maxlength="6" pattern="[0-9]*" inputmode="numeric" class="w-full px-4 py-3 rounded-lg border border-brand-charcoal/10 text-center text-lg tracking-widest focus:outline-none focus:border-brand-terracotta" />
+                    </div>
+                    <button type="submit" class="bg-brand-terracotta text-white w-full py-3.5 rounded-lg font-semibold text-sm hover:bg-opacity-95 transition-all mt-1">
+                        Verify and Save Setup
+                    </button>
+                </form>
             </div>
 
-            <!-- Hidden text input — used on mobile for keyboard, hidden visually -->
-            <input id="pin-input" type="password" inputmode="numeric" pattern="[0-9]*"
-                maxlength="4" autocomplete="one-time-code"
-                aria-label="Enter 4-digit staff PIN"
-                style="position:absolute;opacity:0;pointer-events:none;width:1px;height:1px;" />
-
-            <!-- Numeric keypad -->
-            <div id="pin-keypad"
-                style="display:grid;grid-template-columns:repeat(3,1fr);gap:0.75rem;max-width:240px;margin:0 auto 1.5rem;"
-                role="group" aria-label="PIN entry keypad">
-                <!-- Digits 1-9 -->
-                <button class="pin-key" data-digit="1">1</button>
-                <button class="pin-key" data-digit="2">2</button>
-                <button class="pin-key" data-digit="3">3</button>
-                <button class="pin-key" data-digit="4">4</button>
-                <button class="pin-key" data-digit="5">5</button>
-                <button class="pin-key" data-digit="6">6</button>
-                <button class="pin-key" data-digit="7">7</button>
-                <button class="pin-key" data-digit="8">8</button>
-                <button class="pin-key" data-digit="9">9</button>
-                <!-- Bottom row: blank, 0, backspace -->
-                <span></span>
-                <button class="pin-key" data-digit="0">0</button>
-                <button id="pin-backspace" aria-label="Delete last digit"
-                    style="background:rgba(43,36,32,0.06);">
-                    <span class="material-symbols-outlined" style="font-size:1.25rem;">backspace</span>
-                </button>
+            <!-- 3. MFA Verification View -->
+            <div id="mfa-verify-view" class="hidden">
+                <div style="width:4rem;height:4rem;background:rgba(217,105,45,0.08);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 2rem;">
+                    <span class="material-symbols-outlined" style="font-size:2rem;color:var(--brand-terracotta);">security</span>
+                </div>
+                <h1 style="font-family:var(--font-headline);font-size:1.5rem;margin-bottom:0.5rem;">
+                    Verification Code
+                </h1>
+                <p style="font-size:0.875rem;color:var(--on-surface-variant);margin-bottom:2rem;">
+                    Enter the 6-digit rolling code from your authenticator app.
+                </p>
+                <form id="form-mfa-verify" class="flex flex-col gap-3 text-left">
+                    <div>
+                        <label for="input-mfa-code" class="block text-xs font-semibold mb-1 opacity-70">MFA Verification Code</label>
+                        <input id="input-mfa-code" type="text" required placeholder="000000" maxlength="6" pattern="[0-9]*" inputmode="numeric" class="w-full px-4 py-3 rounded-lg border border-brand-charcoal/10 text-center text-lg tracking-widest focus:outline-none focus:border-brand-terracotta" />
+                    </div>
+                    <button type="submit" class="bg-brand-terracotta text-white w-full py-3.5 rounded-lg font-semibold text-sm hover:bg-opacity-95 transition-all mt-2">
+                        Verify Code
+                    </button>
+                </form>
             </div>
 
             <!-- Status / error message -->
             <div id="pin-status" role="alert" aria-live="assertive"
-                style="min-height:1.5rem;font-size:0.85rem;font-weight:600;color:#ba1a1a;margin-bottom:1rem;">
+                style="min-height:1.5rem;font-size:0.85rem;font-weight:600;color:#ba1a1a;margin-top:1.5rem;margin-bottom:1rem;">
             </div>
 
             <!-- Back to site -->
             <a href="index.html"
-                style="font-size:0.8rem;color:var(--on-surface-variant);text-decoration:none;display:inline-flex;align-items:center;gap:0.25rem;">
+                style="font-size:0.8rem;color:var(--on-surface-variant);text-decoration:none;display:inline-flex;align-items:center;gap:0.25rem;margin-top:0.5rem;">
                 <span class="material-symbols-outlined" style="font-size:1rem;">arrow_back</span>
                 Back to restaurant website
             </a>
@@ -216,354 +228,416 @@
                 <div class="dashboard-header">
                     <div>
                         <h2 class="font-headline text-4xl mb-2">Reservation Dashboard</h2>
-                        <p style="color: var(--on-surface-variant); font-size: 0.95rem;">Track, verify, and complete table bookings submitted by guests.</p>
+                        <p style="color: var(--on-surface-variant); font-size: 0.95rem;">Track, verify, and complete
+                            table bookings submitted by guests.</p>
                     </div>
-                    <button class="action-btn"
-                        onclick="if(confirm('Reset database to default seed bookings?')){localStorage.removeItem('mama_oliech_reservations'); window.location.reload();}"
-                        style="background-color: var(--brand-charcoal); color: white; border: none; padding: 0.75rem 1.25rem;">
-                        Reset Seed Data
+                </div>
+
+                <!-- Tab Switcher -->
+                <div class="flex gap-6 border-b border-brand-charcoal/10 pb-2 mb-8 mt-4">
+                    <button id="tab-btn-reservations"
+                        class="font-headline text-lg font-bold pb-2 border-b-2 border-brand-terracotta text-brand-terracotta transition-all cursor-pointer">
+                        Table Reservations
+                    </button>
+                    <button id="tab-btn-orders"
+                        class="font-headline text-lg font-bold pb-2 border-b-2 border-transparent text-brand-charcoal/60 hover:text-brand-terracotta transition-all cursor-pointer">
+                        Food &amp; Room Service Orders
                     </button>
                 </div>
 
-                <!-- Stats Counters Row -->
-                <div class="dashboard-stats">
-                    <div class="stat-card">
-                        <div class="stat-icon bookings">
-                            <span class="material-symbols-outlined">table_restaurant</span>
+                <!-- 1. Reservations Section -->
+                <div id="reservations-section">
+                    <!-- Stats Counters Row -->
+                    <div class="dashboard-stats mb-6">
+                        <div class="stat-card">
+                            <div class="stat-icon bookings">
+                                <span class="material-symbols-outlined">table_restaurant</span>
+                            </div>
+                            <div class="stat-info">
+                                <h4>Total Bookings</h4>
+                                <p id="total-bookings">0</p>
+                            </div>
                         </div>
-                        <div class="stat-info">
-                            <h4>Total Bookings</h4>
-                            <p id="total-bookings">0</p>
+                        <div class="stat-card">
+                            <div class="stat-icon guests">
+                                <span class="material-symbols-outlined">groups</span>
+                            </div>
+                            <div class="stat-info">
+                                <h4>Expected Guests</h4>
+                                <p id="total-guests">0</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon pending">
+                                <span class="material-symbols-outlined">pending_actions</span>
+                            </div>
+                            <div class="stat-info">
+                                <h4>Pending Review</h4>
+                                <p id="pending-bookings">0</p>
+                            </div>
                         </div>
                     </div>
-                    <div class="stat-card">
-                        <div class="stat-icon guests">
-                            <span class="material-symbols-outlined">groups</span>
+
+                    <!-- Dashboard Filters & Controls -->
+                    <div class="dashboard-controls mb-6">
+                        <div style="flex: 1; min-width: 250px;">
+                            <input id="search-booking" style="width: 100%;" type="text"
+                                placeholder="Search customer name, phone, or Booking ID..." />
                         </div>
-                        <div class="stat-info">
-                            <h4>Expected Guests</h4>
-                            <p id="total-guests">0</p>
+                        <div>
+                            <select id="filter-status">
+                                <option value="all">All Statuses</option>
+                                <option value="pending">Pending</option>
+                                <option value="confirmed">Confirmed</option>
+                                <option value="completed">Completed</option>
+                            </select>
                         </div>
                     </div>
-                    <div class="stat-card">
-                        <div class="stat-icon pending">
-                            <span class="material-symbols-outlined">pending_actions</span>
-                        </div>
-                        <div class="stat-info">
-                            <h4>Pending Review</h4>
-                            <p id="pending-bookings">0</p>
-                        </div>
+
+                    <!-- Bookings List Table -->
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Booking ID</th>
+                                    <th>Customer Details</th>
+                                    <th>Guests</th>
+                                    <th>Date &amp; Time</th>
+                                    <th>Special Requests</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dashboard-body">
+                            </tbody>
+                        </table>
                     </div>
                 </div>
 
-                <!-- Dashboard Filters & Controls -->
-                <div class="dashboard-controls">
-                    <div style="flex: 1; min-width: 250px;">
-                        <input id="search-booking" style="width: 100%;" type="text"
-                            placeholder="Search customer name, phone, or Booking ID..." />
+                <!-- 2. Orders Section -->
+                <div id="orders-section" style="display: none;">
+                    <!-- Stats Counters Row -->
+                    <div class="dashboard-stats mb-6">
+                        <div class="stat-card">
+                            <div class="stat-icon bookings">
+                                <span class="material-symbols-outlined">receipt_long</span>
+                            </div>
+                            <div class="stat-info">
+                                <h4>Total Orders</h4>
+                                <p id="total-orders">0</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon guests"
+                                style="background-color: rgba(232,184,75,0.08); color: var(--brand-gold);">
+                                <span class="material-symbols-outlined"
+                                    style="color: var(--brand-gold);">soup_kitchen</span>
+                            </div>
+                            <div class="stat-info">
+                                <h4>Preparing / Cooking</h4>
+                                <p id="cooking-orders">0</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon pending"
+                                style="background-color: rgba(58,90,64,0.08); color: var(--brand-green);">
+                                <span class="material-symbols-outlined"
+                                    style="color: var(--brand-green);">payments</span>
+                            </div>
+                            <div class="stat-info">
+                                <h4>Revenue Collected</h4>
+                                <p id="total-revenue">KES 0</p>
+                            </div>
+                        </div>
                     </div>
-                    <div>
-                        <select id="filter-status">
-                            <option value="all">All Statuses</option>
-                            <option value="pending">Pending</option>
-                            <option value="confirmed">Confirmed</option>
-                            <option value="completed">Completed</option>
-                        </select>
+
+                    <!-- Dashboard Filters & Controls -->
+                    <div class="dashboard-controls mb-6">
+                        <div style="flex: 1; min-width: 250px;">
+                            <input id="search-order" style="width: 100%;" type="text"
+                                placeholder="Search customer name, phone, Room #, Table #, or Order ID..." />
+                        </div>
+                        <div>
+                            <select id="filter-order-status">
+                                <option value="all">All Statuses</option>
+                                <option value="pending">Pending Payment</option>
+                                <option value="confirmed">Confirmed</option>
+                                <option value="cooking">Cooking</option>
+                                <option value="dispatched">Dispatched</option>
+                                <option value="completed">Completed</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Orders List Table -->
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Order ID</th>
+                                    <th>Customer Details</th>
+                                    <th>Destination Details</th>
+                                    <th>Items Ordered</th>
+                                    <th>Total &amp; Payment</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="orders-dashboard-body">
+                            </tbody>
+                        </table>
                     </div>
                 </div>
-
-                <!-- Bookings List Table -->
-                <div class="table-wrapper">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Booking ID</th>
-                                <th>Customer Details</th>
-                                <th>Guests</th>
-                                <th>Date &amp; Time</th>
-                                <th>Special Requests</th>
-                                <th>Status</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="dashboard-body">
-                        </tbody>
-                    </table>
-                </div>
-
             </div>
+
+        </div>
         </div>
     </main>
 
     <!-- Footer (staff-only, minimal) -->
-    <footer id="dashboard-footer" style="display:none;background-color:var(--brand-charcoal);color:#fff;padding:2rem 1.5rem;text-align:center;">
-        <p style="font-size:0.8rem;opacity:0.5;">© 2026 Mama Oliech Restaurant — Staff Portal. Not for public distribution.</p>
+    <footer id="dashboard-footer"
+        style="display:none;background-color:var(--brand-charcoal);color:#fff;padding:2rem 1.5rem;text-align:center;">
+        <p style="font-size:0.8rem;opacity:0.5;">© 2026 Mama Oliech Restaurant — Staff Portal. Not for public
+            distribution.</p>
     </footer>
 
-    <!-- Keypad button styles (injected rather than relying on Tailwind) -->
+    <!-- Portal interactive animation & element styles -->
     <style>
-        .pin-key {
-            background: var(--surface-white, #fff);
-            border: 1px solid var(--border-color, rgba(43,36,32,0.1));
-            border-radius: 10px;
-            padding: 0.9rem;
-            font-family: var(--font-body, sans-serif);
-            font-size: 1.25rem;
-            font-weight: 600;
-            color: var(--brand-charcoal, #2B2420);
-            cursor: pointer;
-            transition: background 0.15s, transform 0.1s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .pin-key:hover {
-            background: var(--brand-bg, #FBF6EE);
-        }
-        .pin-key:active {
-            transform: scale(0.92);
-            background: rgba(217,105,45,0.08);
-        }
-        .pin-key:focus-visible {
-            outline: 3px solid var(--brand-terracotta, #D9692D);
-            outline-offset: 2px;
-        }
-        .pin-dot.filled {
-            background: var(--brand-terracotta, #D9692D) !important;
-        }
-        .pin-dot.error {
-            background: #ba1a1a !important;
-        }
         #pin-gate-overlay.shake {
             animation: pinShake 0.4s ease;
         }
+
         @keyframes pinShake {
-            0%, 100% { transform: translateX(0); }
-            20%       { transform: translateX(-10px); }
-            40%       { transform: translateX(10px); }
-            60%       { transform: translateX(-8px); }
-            80%       { transform: translateX(8px); }
+
+            0%,
+            100% {
+                transform: translateX(0);
+            }
+
+            20% {
+                transform: translateX(-10px);
+            }
+
+            40% {
+                transform: translateX(10px);
+            }
+
+            60% {
+                transform: translateX(-8px);
+            }
+
+            80% {
+                transform: translateX(8px);
+            }
         }
+
         #logout-btn:hover {
-            background: rgba(186,26,26,0.15) !important;
+            background: rgba(186, 26, 26, 0.15) !important;
         }
     </style>
 
     <!-- Scripts -->
     <script src="js/main.js" defer></script>
     <script src="js/booking.js" defer></script>
+    <script src="js/orders.js" defer></script>
 
-    <!-- PIN Gate Logic -->
+    <!-- Login & MFA Logic -->
     <script>
-    (function () {
-        'use strict';
+        (function () {
+            'use strict';
 
-        var gate       = window.__staffGate;
-        var PIN_HASH   = gate.pinHash;
-        var SESSION_KEY = gate.sessionKey;
-        var MAX_ATTEMPTS = gate.maxAttempts;
-        var LOCKOUT_MS   = gate.lockoutMs;
+            var gate = window.__staffGate;
+            var SESSION_KEY = gate.sessionKey;
 
-        var ATTEMPTS_KEY = 'mo_staff_attempts';
-        var LOCKOUT_KEY  = 'mo_staff_lockout';
+            var overlay = document.getElementById('pin-gate-overlay');
+            var mainEl = document.getElementById('dashboard-main');
+            var headerEl = document.getElementById('dashboard-header');
+            var footerEl = document.getElementById('dashboard-footer');
+            var statusEl = document.getElementById('pin-status');
+            var logoutBtn = document.getElementById('logout-btn');
 
-        var overlay    = document.getElementById('pin-gate-overlay');
-        var mainEl     = document.getElementById('dashboard-main');
-        var headerEl   = document.getElementById('dashboard-header');
-        var footerEl   = document.getElementById('dashboard-footer');
-        var dotsEl     = document.getElementById('pin-dots');
-        var statusEl   = document.getElementById('pin-status');
-        var pinInput   = document.getElementById('pin-input');
-        var logoutBtn  = document.getElementById('logout-btn');
+            var loginView = document.getElementById('login-view-form');
+            var mfaSetupView = document.getElementById('mfa-setup-view');
+            var mfaVerifyView = document.getElementById('mfa-verify-view');
 
-        var currentPin = '';
+            var loginForm = document.getElementById('form-staff-login');
+            var mfaSetupForm = document.getElementById('form-mfa-setup');
+            var mfaVerifyForm = document.getElementById('form-mfa-verify');
 
-        // ── Helper: SHA-256 via WebCrypto ──────────────────────────────────
-        function sha256hex(str) {
-            var encoded = new TextEncoder().encode(str);
-            return crypto.subtle.digest('SHA-256', encoded).then(function (buf) {
-                return Array.from(new Uint8Array(buf))
-                    .map(function (b) { return b.toString(16).padStart(2, '0'); })
-                    .join('');
-            });
-        }
+            var usernameInput = document.getElementById('input-username');
+            var passwordInput = document.getElementById('input-password');
+            var qrImg = document.getElementById('mfa-qrcode-img');
+            var secretText = document.getElementById('mfa-secret-text');
+            var setupCodeInput = document.getElementById('input-mfa-setup');
+            var mfaCodeInput = document.getElementById('input-mfa-code');
 
-        // ── Show / hide dashboard ──────────────────────────────────────────
-        function showDashboard() {
-            overlay.style.display = 'none';
-            mainEl.style.display  = '';
-            headerEl.style.display = '';
-            footerEl.style.display = '';
-            // booking.js checks for #dashboard-body on DOMContentLoaded.
-            // If it already fired, trigger a manual render.
-            if (typeof renderDashboard === 'function') {
-                renderDashboard();
-            }
-        }
+            var tempToken = '';
 
-        // ── Lockout helpers ────────────────────────────────────────────────
-        function getAttempts() {
-            return parseInt(localStorage.getItem(ATTEMPTS_KEY) || '0', 10);
-        }
-        function setAttempts(n) {
-            localStorage.setItem(ATTEMPTS_KEY, String(n));
-        }
-        function getLockoutUntil() {
-            return parseInt(localStorage.getItem(LOCKOUT_KEY) || '0', 10);
-        }
-        function setLockout() {
-            localStorage.setItem(LOCKOUT_KEY, String(Date.now() + LOCKOUT_MS));
-        }
-        function clearLockout() {
-            localStorage.removeItem(ATTEMPTS_KEY);
-            localStorage.removeItem(LOCKOUT_KEY);
-        }
-        function isLockedOut() {
-            var until = getLockoutUntil();
-            if (until && Date.now() < until) return true;
-            if (until && Date.now() >= until) clearLockout();
-            return false;
-        }
-        function minutesRemaining() {
-            var ms = getLockoutUntil() - Date.now();
-            return Math.ceil(ms / 60000);
-        }
+            const BACKEND_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.protocol === 'file:'
+                ? 'http://localhost:5000'
+                : '';
 
-        // ── Update dot display ─────────────────────────────────────────────
-        function updateDots(error) {
-            var dots = dotsEl.querySelectorAll('.pin-dot');
-            dots.forEach(function (dot, i) {
-                dot.classList.remove('filled', 'error');
-                if (error) {
-                    dot.classList.add('error');
-                } else if (i < currentPin.length) {
-                    dot.classList.add('filled');
+            // ── Show / hide dashboard ──────────────────────────────────────────
+            function showDashboard() {
+                overlay.style.display = 'none';
+                mainEl.style.display = '';
+                headerEl.style.display = '';
+                footerEl.style.display = '';
+                // booking.js/orders.js render manual dashboard if defined
+                if (typeof renderDashboard === 'function') {
+                    renderDashboard();
                 }
-            });
-        }
-
-        // ── Append a digit ─────────────────────────────────────────────────
-        function appendDigit(digit) {
-            if (isLockedOut()) return;
-            if (currentPin.length >= 4) return;
-            currentPin += digit;
-            updateDots(false);
-            statusEl.textContent = '';
-
-            if (currentPin.length === 4) {
-                verifyPin(currentPin);
             }
-        }
 
-        // ── Remove last digit ──────────────────────────────────────────────
-        function removeDigit() {
-            if (currentPin.length === 0) return;
-            currentPin = currentPin.slice(0, -1);
-            updateDots(false);
-        }
+            // Shake animation for error feedback
+            function shakeOverlay() {
+                overlay.classList.remove('shake');
+                void overlay.offsetWidth; // Force reflow
+                overlay.classList.add('shake');
+            }
 
-        // ── Verify the entered PIN ─────────────────────────────────────────
-        function verifyPin(pin) {
-            sha256hex(pin).then(function (hash) {
-                if (hash === PIN_HASH) {
-                    // Correct — store session and show dashboard.
-                    try { sessionStorage.setItem(SESSION_KEY, PIN_HASH); } catch (e) {}
-                    clearLockout();
+            // ── Stage 1 Login Submission ──────────────────────────────────────
+            loginForm.addEventListener('submit', function (e) {
+                e.preventDefault();
+                statusEl.textContent = '';
+
+                var payload = {
+                    username: usernameInput.value.trim(),
+                    password: passwordInput.value
+                };
+
+                fetch(BACKEND_URL + '/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                })
+                .then(function (res) {
+                    if (!res.ok) {
+                        return res.json().then(function (d) { throw new Error(d.error || 'Login failed.'); });
+                    }
+                    return res.json();
+                })
+                .then(function (data) {
+                    tempToken = data.tempToken;
+                    if (data.status === 'mfa_setup') {
+                        // Switch to Setup QR Code View
+                        loginView.classList.add('hidden');
+                        mfaSetupView.classList.remove('hidden');
+                        qrImg.src = data.qrCode;
+                        secretText.textContent = 'Secret key: ' + data.secret;
+                        setupCodeInput.focus();
+                    } else if (data.status === 'mfa_required') {
+                        // Switch to Code Entry Verification View
+                        loginView.classList.add('hidden');
+                        mfaVerifyView.classList.remove('hidden');
+                        mfaCodeInput.focus();
+                    }
+                })
+                .catch(function (err) {
+                    statusEl.textContent = err.message;
+                    shakeOverlay();
+                });
+            });
+
+            // ── Stage 2 Setup Verification ────────────────────────────────────
+            mfaSetupForm.addEventListener('submit', function (e) {
+                e.preventDefault();
+                statusEl.textContent = '';
+
+                var payload = {
+                    tempToken: tempToken,
+                    code: setupCodeInput.value.trim()
+                };
+
+                fetch(BACKEND_URL + '/api/auth/mfa/verify', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                })
+                .then(function (res) {
+                    if (!res.ok) {
+                        return res.json().then(function (d) { throw new Error(d.error || 'Setup verification failed.'); });
+                    }
+                    return res.json();
+                })
+                .then(function (data) {
+                    sessionStorage.setItem(SESSION_KEY, data.token);
+                    showDashboard();
+                })
+                .catch(function (err) {
+                    statusEl.textContent = err.message;
+                    shakeOverlay();
+                });
+            });
+
+            // ── Stage 2 Challenge Verification ────────────────────────────────
+            mfaVerifyForm.addEventListener('submit', function (e) {
+                e.preventDefault();
+                statusEl.textContent = '';
+
+                var payload = {
+                    tempToken: tempToken,
+                    code: mfaCodeInput.value.trim()
+                };
+
+                fetch(BACKEND_URL + '/api/auth/mfa/verify', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                })
+                .then(function (res) {
+                    if (!res.ok) {
+                        return res.json().then(function (d) { throw new Error(d.error || 'Verification failed.'); });
+                    }
+                    return res.json();
+                })
+                .then(function (data) {
+                    sessionStorage.setItem(SESSION_KEY, data.token);
+                    showDashboard();
+                })
+                .catch(function (err) {
+                    statusEl.textContent = err.message;
+                    shakeOverlay();
+                });
+            });
+
+            // ── Logout ─────────────────────────────────────────────────────────
+            if (logoutBtn) {
+                logoutBtn.addEventListener('click', function () {
+                    try { sessionStorage.removeItem(SESSION_KEY); } catch (e) { }
+                    overlay.style.display = 'flex';
+                    mainEl.style.display = 'none';
+                    headerEl.style.display = 'none';
+                    footerEl.style.display = 'none';
+
+                    loginView.classList.remove('hidden');
+                    mfaSetupView.classList.add('hidden');
+                    mfaVerifyView.classList.add('hidden');
+
+                    usernameInput.value = '';
+                    passwordInput.value = '';
+                    setupCodeInput.value = '';
+                    mfaCodeInput.value = '';
+                    statusEl.textContent = '';
+                    usernameInput.focus();
+                });
+            }
+
+            // ── On Load ────────────────────────────────────────────────────────
+            document.addEventListener('DOMContentLoaded', function () {
+                if (gate.authenticated) {
                     showDashboard();
                 } else {
-                    // Wrong — increment attempts.
-                    var attempts = getAttempts() + 1;
-                    setAttempts(attempts);
-
-                    currentPin = '';
-                    updateDots(true);
-
-                    // Shake animation.
-                    overlay.classList.remove('shake');
-                    void overlay.offsetWidth; // reflow to restart animation
-                    overlay.classList.add('shake');
-
-                    var remaining = MAX_ATTEMPTS - attempts;
-
-                    if (attempts >= MAX_ATTEMPTS) {
-                        setLockout();
-                        statusEl.textContent = 'Too many incorrect attempts. Locked for 15 minutes.';
-                    } else {
-                        statusEl.textContent = 'Incorrect PIN. ' + remaining + ' attempt' + (remaining === 1 ? '' : 's') + ' remaining.';
-                    }
-
-                    // Reset dots to empty after shake.
-                    setTimeout(function () {
-                        updateDots(false);
-                    }, 600);
+                    overlay.style.display = 'flex';
+                    mainEl.style.display = 'none';
+                    headerEl.style.display = 'none';
+                    footerEl.style.display = 'none';
+                    if (usernameInput) usernameInput.focus();
                 }
             });
-        }
 
-        // ── Lockout screen ─────────────────────────────────────────────────
-        function checkAndShowLockout() {
-            if (isLockedOut()) {
-                statusEl.textContent = 'Account locked. Try again in ' + minutesRemaining() + ' minute(s).';
-                document.getElementById('pin-keypad').style.pointerEvents = 'none';
-                document.getElementById('pin-keypad').style.opacity = '0.4';
-                // Refresh every 10s to update the countdown and re-enable when expired.
-                var timer = setInterval(function () {
-                    if (!isLockedOut()) {
-                        clearInterval(timer);
-                        statusEl.textContent = '';
-                        document.getElementById('pin-keypad').style.pointerEvents = '';
-                        document.getElementById('pin-keypad').style.opacity = '';
-                    } else {
-                        statusEl.textContent = 'Account locked. Try again in ' + minutesRemaining() + ' minute(s).';
-                    }
-                }, 10000);
-            }
-        }
-
-        // ── Keypad button listeners ────────────────────────────────────────
-        document.getElementById('pin-keypad').addEventListener('click', function (e) {
-            var btn = e.target.closest('.pin-key[data-digit]');
-            if (btn) appendDigit(btn.dataset.digit);
-        });
-
-        document.getElementById('pin-backspace').addEventListener('click', removeDigit);
-
-        // ── Physical keyboard support ──────────────────────────────────────
-        document.addEventListener('keydown', function (e) {
-            if (overlay.style.display === 'none') return; // dashboard visible, don't intercept
-            if (/^[0-9]$/.test(e.key)) { appendDigit(e.key); return; }
-            if (e.key === 'Backspace') removeDigit();
-        });
-
-        // ── Logout button ──────────────────────────────────────────────────
-        if (logoutBtn) {
-            logoutBtn.addEventListener('click', function () {
-                try { sessionStorage.removeItem(SESSION_KEY); } catch (e) {}
-                // Show overlay, hide dashboard.
-                overlay.style.display = 'flex';
-                mainEl.style.display  = 'none';
-                headerEl.style.display = 'none';
-                footerEl.style.display = 'none';
-                currentPin = '';
-                updateDots(false);
-                statusEl.textContent = '';
-            });
-        }
-
-        // ── On load: check existing session or show gate ───────────────────
-        document.addEventListener('DOMContentLoaded', function () {
-            if (gate.authenticated) {
-                showDashboard();
-            } else {
-                checkAndShowLockout();
-                // Focus the hidden input so mobile keyboards might appear.
-                // (Most mobile browsers won't show keyboard without direct user tap,
-                //  but this improves desktop keyboard entry.)
-                if (pinInput) pinInput.focus();
-            }
-        });
-
-    }());
+        }());
     </script>
 </body>
+
 </html>
