@@ -802,7 +802,9 @@
 
             fetch(`${BACKEND_URL}/api/payments/stkpush`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: (window.Auth && window.Auth.isLoggedIn())
+                    ? { 'Content-Type': 'application/json', 'Authorization': `Bearer ${window.Auth.getToken()}` }
+                    : { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             })
             .then(res => {
@@ -859,7 +861,9 @@
 
             fetch(`${BACKEND_URL}/api/payments/direct-order`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: (window.Auth && window.Auth.isLoggedIn())
+                    ? { 'Content-Type': 'application/json', 'Authorization': `Bearer ${window.Auth.getToken()}` }
+                    : { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             })
             .then(res => {

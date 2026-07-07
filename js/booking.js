@@ -388,9 +388,14 @@ function handleFormSubmit(e) {
     }
 
     // ── Save to backend database first ───────────────────────────────────────
+    const reservationHeaders = { 'Content-Type': 'application/json' };
+    if (window.Auth && window.Auth.isLoggedIn()) {
+        reservationHeaders['Authorization'] = `Bearer ${window.Auth.getToken()}`;
+    }
+
     fetch(`${BACKEND_URL}/api/reservations`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: reservationHeaders,
         body: JSON.stringify(reservation)
     })
     .then(async res => {
