@@ -32,7 +32,8 @@ exports.createReservation = async (req, res, next) => {
             reservation_date: date,
             reservation_time: time,
             special_requests: (requests || 'None').trim(),
-            status: 'pending'
+            status: 'pending',
+            customer_id: req.customer ? req.customer.customerId : null
         };
 
         await pool('reservations').insert(reservationData);

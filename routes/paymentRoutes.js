@@ -4,9 +4,10 @@
 const express = require('express');
 const router = express.Router();
 const paymentController = require('../controllers/paymentController');
+const optionalCustomerAuth = require('../middleware/customerAuth').optional;
 
 // 1. Initiate M-Pesa STK Push payment
-router.post('/stkpush', paymentController.initiateMpesaPayment);
+router.post('/stkpush', optionalCustomerAuth, paymentController.initiateMpesaPayment);
 
 // 2. Safaricom callback URL webhook endpoint (Safaricom Daraja API makes POST request here)
 // Note: This endpoint should not require CSRF / session authorization cookies
@@ -16,6 +17,6 @@ router.post('/callback', paymentController.handleMpesaCallback);
 router.get('/order/:id/status', paymentController.checkOrderStatus);
 
 // 4. Create direct offline orders (Cash on Delivery, Room Charge)
-router.post('/direct-order', paymentController.createDirectOrder);
+router.post('/direct-order', optionalCustomerAuth, paymentController.createDirectOrder);
 
 module.exports = router;

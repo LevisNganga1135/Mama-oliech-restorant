@@ -1,8 +1,6 @@
 // knexfile.js
-// Knex migration configuration file for the PostgreSQL database
-
+// Knex migration configuration file for the MySQL database
 require('dotenv').config();
-
 module.exports = {
   development: {
     client: 'mysql2',
@@ -11,7 +9,8 @@ module.exports = {
       port: process.env.DB_PORT,
       user: process.env.DB_USER,
       password: process.env.DB_PASSWORD,
-      database: process.env.DB_NAME
+      database: process.env.DB_NAME,
+      multipleStatements: true
     },
     migrations: {
       directory: './db/migrations',

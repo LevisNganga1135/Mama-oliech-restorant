@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html class="scroll-smooth" lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <link rel="canonical" href="https://mamaoliech.com/login.html" />
+    <title>Login | Mama Oliech Restaurant</title>
+    <meta content="Log in or create an account with Mama Oliech Restaurant to track your orders and reservations."
+        name="description" />
+
+    <link href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600;700&display=swap"
+        rel="stylesheet" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Symbols+Outlined" />
+
+    <!-- Auth must load before other scripts on every page -->
+    <script src="js/auth.js" defer></script>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "brand-bg": "#FBF6EE",
+                        "brand-charcoal": "#2B2420",
+                        "brand-terracotta": "#D9692D",
+                        "brand-green": "#3A5A40",
+                        "brand-gold": "#E8B84B"
+                    }
+                }
+            }
+        }
+    </script>
+
+    <link href="css/style.css" rel="stylesheet" />
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+    <link rel="icon" type="image/png" href="favicon.png" />
+
+    <style>
+        .login-shell {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 7rem 1.25rem 3rem;
+        }
+
+        .login-card {
+            background: #fff;
+            border-radius: 20px;
+            padding: 2.25rem 2rem;
+            max-width: 440px;
+            width: 100%;
+            box-shadow: 0 8px 40px rgba(0, 0, 0, 0.10);
+        }
+
+        .auth-tab {
+            flex: 1;
+            text-align: center;
+            padding: 0.6rem 0;
+            font-weight: 700;
+            font-size: 0.95rem;
+            color: #888;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            transition: all 0.2s;
+            background: none;
+            border-top: none;
+            border-left: none;
+            border-right: none;
+        }
+
+        .auth-tab.active {
+            color: var(--brand-terracotta, #D9692D);
+            border-bottom-color: var(--brand-terracotta, #D9692D);
+        }
+
+        .auth-field {
+            margin-bottom: 1rem;
+        }
+
+        .auth-field label {
+            display: block;
+            font-size: 0.82rem;
+            font-weight: 600;
+            margin-bottom: 0.35rem;
+            color: #444;
+        }
+
+        .auth-field input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 1.5px solid rgba(0, 0, 0, 0.15);
+            border-radius: 10px;
+            font-size: 0.95rem;
+            font-family: inherit;
+            background: #fafafa;
+            box-sizing: border-box;
+            transition: border-color 0.2s;
+        }
+
+        .auth-field input:focus {
+            outline: none;
+            border-color: var(--brand-terracotta, #D9692D);
+        }
+
+        .auth-submit-btn {
+            width: 100%;
+            padding: 0.9rem;
+            background: var(--brand-terracotta, #D9692D);
+            color: #fff;
+            border: none;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            margin-top: 0.5rem;
+            transition: background 0.2s, opacity 0.2s;
+        }
+
+        .auth-submit-btn:hover {
+            background: #b8521f;
+        }
+
+        .auth-submit-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .auth-msg {
+            display: none;
+            padding: 0.7rem 1rem;
+            border-radius: 10px;
+            font-size: 0.85rem;
+            margin-bottom: 1rem;
+        }
+    </style>
+</head>
+
+<body class="bg-brand-bg text-brand-charcoal font-body selection:bg-brand-terracotta selection:text-white">
+
+    <header class="fixed w-full top-0 z-50 bg-brand-bg/90 backdrop-blur-md border-b border-brand-charcoal/10">
+        <nav class="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
+            <a class="font-headline text-2xl font-bold text-brand-terracotta tracking-tight" href="index.html">
+                MAMA OLIECH RESTAURANT
+            </a>
+            <div class="hidden md:flex gap-8 items-center">
+                <a class="font-semibold text-sm hover:text-brand-terracotta transition-colors" href="menu.html">Menu</a>
+                <a class="font-semibold text-sm hover:text-brand-terracotta transition-colors" href="about.html">Our
+                    Story</a>
+                <a class="font-semibold text-sm hover:text-brand-terracotta transition-colors"
+                    href="events.html">Events</a>
+                <a class="font-semibold text-sm hover:text-brand-terracotta transition-colors"
+                    href="gallery.html">Gallery</a>
+                <a class="font-semibold text-sm hover:text-brand-terracotta transition-colors"
+                    href="contact.html">Location</a>
+            </div>
+        </nav>
+    </header>
+
+    <main class="login-shell">
+        <div class="login-card">
+            <div style="text-align:center;margin-bottom:1.5rem;">
+                <div style="font-size:2rem;">🐟</div>
+                <div
+                    style="font-family:'Playfair Display',serif;font-size:1.4rem;font-weight:700;color:var(--brand-terracotta,#D9692D);">
+                    Welcome to Mama Oliech
+                </div>
+                <p style="font-size:0.85rem;color:#888;margin-top:0.25rem;">Sign in to track your orders and
+                    reservations</p>
+            </div>
+
+            <div style="display:flex;border-bottom:1.5px solid rgba(0,0,0,0.08);margin-bottom:1.5rem;">
+                <button class="auth-tab active" data-tab="login" id="tab-login">Login</button>
+                <button class="auth-tab" data-tab="register" id="tab-register">Register</button>
+            </div>
+
+            <div class="auth-msg" id="auth-msg"></div>
+
+            <!-- Login form -->
+            <form id="login-form">
+                <div class="auth-field">
+                    <label for="login-email">Email</label>
+                    <input type="email" id="login-email" autocomplete="username" required />
+                </div>
+                <div class="auth-field">
+                    <label for="login-password">Password</label>
+                    <input type="password" id="login-password" autocomplete="current-password" required />
+                </div>
+                <button type="submit" class="auth-submit-btn" id="login-submit-btn">Log In</button>
+            </form>
+
+            <!-- Register form -->
+            <form id="register-form" style="display:none;">
+                <div class="auth-field">
+                    <label for="reg-name">Full Name</label>
+                    <input type="text" id="reg-name" autocomplete="name" required />
+                </div>
+                <div class="auth-field">
+                    <label for="reg-email">Email</label>
+                    <input type="email" id="reg-email" autocomplete="username" required />
+                </div>
+                <div class="auth-field">
+                    <label for="reg-phone">Phone Number</label>
+                    <input type="tel" id="reg-phone" placeholder="07XXXXXXXX" autocomplete="tel" required />
+                </div>
+                <div class="auth-field">
+                    <label for="reg-password">Password</label>
+                    <input type="password" id="reg-password" autocomplete="new-password" required minlength="6" />
+                </div>
+                <button type="submit" class="auth-submit-btn" id="register-submit-btn">Create Account</button>
+            </form>
+
+            <p style="text-align:center;font-size:0.85rem;color:#888;margin-top:1.5rem;">
+                <a href="index.html" style="color:var(--brand-terracotta,#D9692D);font-weight:600;text-decoration:none;">← Back to Home</a>
+            </p>
+        </div>
+    </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // If already logged in, no reason to be on the login page
+            if (window.Auth && window.Auth.isLoggedIn()) {
+                const params = new URLSearchParams(window.location.search);
+                window.location.href = params.get('redirect') || 'profile.html';
+                return;
+            }
+
+            const tabLogin     = document.getElementById('tab-login');
+            const tabRegister  = document.getElementById('tab-register');
+            const loginForm    = document.getElementById('login-form');
+            const registerForm = document.getElementById('register-form');
+            const msg          = document.getElementById('auth-msg');
+            const loginBtn     = document.getElementById('login-submit-btn');
+            const registerBtn  = document.getElementById('register-submit-btn');
+
+            function showMsg(text, type) {
+                msg.textContent = text;
+                msg.style.display = 'block';
+                msg.style.background = type === 'success' ? '#e8f5e9' : '#fdecea';
+                msg.style.color = type === 'success' ? '#2e7d32' : '#ba1a1a';
+                msg.style.border = type === 'success' ? '1px solid #a5d6a7' : '1px solid #f5c6cb';
+            }
+
+            function hideMsg() {
+                msg.style.display = 'none';
+            }
+
+            function switchTab(tab) {
+                hideMsg();
+                const isLogin = tab === 'login';
+                tabLogin.classList.toggle('active', isLogin);
+                tabRegister.classList.toggle('active', !isLogin);
+                loginForm.style.display = isLogin ? 'block' : 'none';
+                registerForm.style.display = isLogin ? 'none' : 'block';
+            }
+
+            tabLogin.addEventListener('click', () => switchTab('login'));
+            tabRegister.addEventListener('click', () => switchTab('register'));
+
+            function redirectAfterAuth() {
+                const params = new URLSearchParams(window.location.search);
+                setTimeout(() => {
+                    window.location.href = params.get('redirect') || 'profile.html';
+                }, 700);
+            }
+
+            loginForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                hideMsg();
+                loginBtn.disabled = true;
+                loginBtn.textContent = 'Logging in...';
+
+                const email    = document.getElementById('login-email').value;
+                const password = document.getElementById('login-password').value;
+
+                const result = await window.Auth.loginCustomer({ email, password });
+
+                loginBtn.disabled = false;
+                loginBtn.textContent = 'Log In';
+
+                if (result.success) {
+                    showMsg(result.message, 'success');
+                    redirectAfterAuth();
+                } else {
+                    showMsg(result.message, 'error');
+                }
+            });
+
+            registerForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                hideMsg();
+                registerBtn.disabled = true;
+                registerBtn.textContent = 'Creating account...';
+
+                const name     = document.getElementById('reg-name').value;
+                const email    = document.getElementById('reg-email').value;
+                const phone    = document.getElementById('reg-phone').value;
+                const password = document.getElementById('reg-password').value;
+
+                const result = await window.Auth.registerCustomer({ name, email, phone, password });
+
+                registerBtn.disabled = false;
+                registerBtn.textContent = 'Create Account';
+
+                if (result.success) {
+                    showMsg('Account created! Welcome, ' + name.split(' ')[0] + ' 🎉', 'success');
+                    redirectAfterAuth();
+                } else {
+                    showMsg(result.message, 'error');
+                }
+            });
+        });
+    </script>
+</body>
+
+</html>

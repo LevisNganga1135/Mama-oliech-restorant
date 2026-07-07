@@ -5,9 +5,10 @@ const express = require('express');
 const router = express.Router();
 const reservationController = require('../controllers/reservationController');
 const auth = require('../middleware/auth');
+const optionalCustomerAuth = require('../middleware/customerAuth').optional;
 
 // 1. Create reservation (Public)
-router.post('/', reservationController.createReservation);
+router.post('/', optionalCustomerAuth, reservationController.createReservation);
 
 // 2. Get all reservations (Admin)
 router.get('/', auth, reservationController.getAllReservations);

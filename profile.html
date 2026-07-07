@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html class="scroll-smooth" lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>My Account | Mama Oliech Restaurant</title>
+    <meta content="View your order history and table reservations at Mama Oliech Restaurant." name="description" />
+
+    <link href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600;700&display=swap"
+        rel="stylesheet" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Symbols+Outlined" />
+
+    <script src="js/auth.js" defer></script>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "brand-bg": "#FBF6EE",
+                        "brand-charcoal": "#2B2420",
+                        "brand-terracotta": "#D9692D",
+                        "brand-green": "#3A5A40",
+                        "brand-gold": "#E8B84B"
+                    }
+                }
+            }
+        }
+    </script>
+
+    <link href="css/style.css" rel="stylesheet" />
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+    <link rel="icon" type="image/png" href="favicon.png" />
+
+    <style>
+        .profile-shell {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 7rem 1.25rem 4rem;
+        }
+
+        .profile-card {
+            background: #fff;
+            border-radius: 16px;
+            padding: 1.75rem;
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
+            margin-bottom: 1.5rem;
+        }
+
+        .history-item {
+            border: 1px solid rgba(0, 0, 0, 0.08);
+            border-radius: 12px;
+            padding: 1rem 1.25rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .status-pill {
+            display: inline-block;
+            padding: 0.2rem 0.7rem;
+            border-radius: 999px;
+            font-size: 0.72rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.02em;
+        }
+
+        .status-pending { background: #fff3cd; color: #856404; }
+        .status-confirmed { background: #d4edda; color: #155724; }
+        .status-completed { background: #d1ecf1; color: #0c5460; }
+        .status-cooking { background: #ffe5d0; color: #b8521f; }
+        .status-dispatched { background: #e2d9f3; color: #4b2e83; }
+    </style>
+</head>
+
+<body class="bg-brand-bg text-brand-charcoal font-body selection:bg-brand-terracotta selection:text-white">
+
+    <header class="fixed w-full top-0 z-50 bg-brand-bg/90 backdrop-blur-md border-b border-brand-charcoal/10">
+        <nav class="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
+            <a class="font-headline text-2xl font-bold text-brand-terracotta tracking-tight" href="index.html">
+                MAMA OLIECH RESTAURANT
+            </a>
+            <div class="hidden md:flex gap-8 items-center">
+                <a class="font-semibold text-sm hover:text-brand-terracotta transition-colors" href="menu.html">Menu</a>
+                <a class="font-semibold text-sm hover:text-brand-terracotta transition-colors" href="about.html">Our
+                    Story</a>
+                <a class="font-semibold text-sm hover:text-brand-terracotta transition-colors"
+                    href="events.html">Events</a>
+                <a class="font-semibold text-sm hover:text-brand-terracotta transition-colors"
+                    href="contact.html">Location</a>
+            </div>
+        </nav>
+    </header>
+
+    <main class="profile-shell">
+        <div class="profile-card" id="profile-header-card">
+            <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;">
+                <div>
+                    <h1 style="font-family:'Playfair Display',serif;font-size:1.6rem;font-weight:700;">
+                        My Account
+                    </h1>
+                    <p id="profile-email" style="color:#888;font-size:0.9rem;margin-top:0.25rem;"></p>
+                </div>
+                <button id="profile-logout-btn" style="
+                    background: transparent;
+                    color: #ba1a1a;
+                    border: 1px solid rgba(186,26,26,0.3);
+                    border-radius: 8px;
+                    padding: 0.5rem 1.1rem;
+                    font-size: 0.85rem;
+                    font-weight: 700;
+                    cursor: pointer;
+                ">Logout</button>
+            </div>
+        </div>
+
+        <div class="profile-card">
+            <h2 style="font-family:'Playfair Display',serif;font-size:1.2rem;font-weight:700;margin-bottom:1rem;">
+                🍽️ My Orders
+            </h2>
+            <div id="orders-list">
+                <p style="color:#888;font-size:0.9rem;">Loading your orders...</p>
+            </div>
+        </div>
+
+        <div class="profile-card">
+            <h2 style="font-family:'Playfair Display',serif;font-size:1.2rem;font-weight:700;margin-bottom:1rem;">
+                📅 My Reservations
+            </h2>
+            <div id="reservations-list">
+                <p style="color:#888;font-size:0.9rem;">Loading your reservations...</p>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        function statusClass(status) {
+            const s = (status || '').toLowerCase();
+            if (s.includes('pending')) return 'status-pending';
+            if (s.includes('confirm')) return 'status-confirmed';
+            if (s.includes('complete')) return 'status-completed';
+            if (s.includes('cook')) return 'status-cooking';
+            if (s.includes('dispatch')) return 'status-dispatched';
+            return 'status-pending';
+        }
+
+        function formatMoney(amount) {
+            const n = parseFloat(amount);
+            return isNaN(n) ? amount : `KES ${n.toLocaleString()}`;
+        }
+
+        function renderOrders(orders) {
+            const container = document.getElementById('orders-list');
+            if (!orders.length) {
+                container.innerHTML = '<p style="color:#888;font-size:0.9rem;">No orders yet — your food orders will show up here once you check out.</p>';
+                return;
+            }
+
+            container.innerHTML = orders.map(order => {
+                let items = [];
+                try { items = JSON.parse(order.items); } catch (e) { items = []; }
+                const itemsSummary = items.map(i => `${i.quantity}× ${i.name}`).join(', ');
+
+                return `
+                    <div class="history-item">
+                        <div style="display:flex;justify-content:space-between;align-items:start;gap:1rem;flex-wrap:wrap;">
+                            <div>
+                                <div style="font-weight:700;font-size:0.95rem;">${order.id}</div>
+                                <div style="font-size:0.85rem;color:#666;margin-top:0.2rem;">${itemsSummary || 'Items unavailable'}</div>
+                                <div style="font-size:0.8rem;color:#999;margin-top:0.3rem;">${new Date(order.created_at).toLocaleString()}</div>
+                            </div>
+                            <div style="text-align:right;">
+                                <span class="status-pill ${statusClass(order.status)}">${order.status}</span>
+                                <div style="font-weight:700;margin-top:0.4rem;">${formatMoney(order.total_price)}</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderReservations(reservations) {
+            const container = document.getElementById('reservations-list');
+            if (!reservations.length) {
+                container.innerHTML = '<p style="color:#888;font-size:0.9rem;">No reservations yet — book a table and it\'ll show up here.</p>';
+                return;
+            }
+
+            container.innerHTML = reservations.map(res => `
+                <div class="history-item">
+                    <div style="display:flex;justify-content:space-between;align-items:start;gap:1rem;flex-wrap:wrap;">
+                        <div>
+                            <div style="font-weight:700;font-size:0.95rem;">${res.id}</div>
+                            <div style="font-size:0.85rem;color:#666;margin-top:0.2rem;">
+                                ${res.num_guests} guests · ${res.reservation_date} at ${res.reservation_time}
+                            </div>
+                            ${res.special_requests && res.special_requests !== 'None' ? `<div style="font-size:0.8rem;color:#999;margin-top:0.2rem;">"${res.special_requests}"</div>` : ''}
+                        </div>
+                        <span class="status-pill ${statusClass(res.status)}">${res.status}</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            if (!window.Auth || !window.Auth.isLoggedIn()) {
+                window.location.href = 'login.html?redirect=profile.html';
+                return;
+            }
+
+            const customer = window.Auth.getCurrentCustomer();
+            if (customer) {
+                document.getElementById('profile-email').textContent = customer.email;
+            }
+
+            document.getElementById('profile-logout-btn').addEventListener('click', () => {
+                window.Auth.logoutUser();
+            });
+
+            const [orders, reservations] = await Promise.all([
+                window.Auth.fetchMyOrders(),
+                window.Auth.fetchMyReservations()
+            ]);
+
+            renderOrders(orders);
+            renderReservations(reservations);
+        });
+    </script>
+</body>
+
+</html>

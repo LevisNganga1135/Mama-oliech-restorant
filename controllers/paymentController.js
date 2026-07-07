@@ -73,7 +73,8 @@ exports.initiateMpesaPayment = async (req, res, next) => {
                 special_instructions: instructions || '',
                 items: JSON.stringify(items),
                 total_price: parseFloat(total),
-                status: 'Pending'
+                status: 'Pending',
+                customer_id: req.customer ? req.customer.customerId : null
             });
 
             // Record M-Pesa Request mapping
@@ -261,7 +262,8 @@ exports.createDirectOrder = async (req, res, next) => {
             special_instructions: instructions || '',
             items: JSON.stringify(items),
             total_price: parseFloat(total),
-            status: paymentMethod === 'room_charge' ? 'Confirmed' : 'Pending'
+            status: paymentMethod === 'room_charge' ? 'Confirmed' : 'Pending',
+            customer_id: req.customer ? req.customer.customerId : null
         };
 
         await pool('orders').insert(orderData);
